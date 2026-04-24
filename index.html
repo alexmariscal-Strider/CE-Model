@@ -216,7 +216,7 @@
           <div id="f-std-demand"></div>
         </div>
         <div class="funnel-section">
-          <div class="funnel-title cap-col">✅ Capacity — Standard CE (Max)</div>
+          <div class="funnel-title cap-col">✅ Capacity — Standard CE</div>
           <div id="f-std-cap"></div>
         </div>
       </div>
@@ -348,16 +348,8 @@ function update() {
   const demandEnrolled = demandStd.enrolled + demandPfa.enrolled;
 
   // ── 2. MAXIMUM THEORETICAL CAPACITY FUNNEL (Right)
-  // Decoupled from demand. Allocates 100% of effCap down the funnel.
-  let maxCapStdPS = 0;
-  if (selMode === 'current') {
-      // If PFA is taking a cut of the queue, we split the max theoretical cap proportionally
-      const stdRatio = ceGrossDemand > 0 ? grossStdPS / ceGrossDemand : 1;
-      maxCapStdPS = effCap * stdRatio;
-  } else {
-      // Future mode: PFA bypasses CE PS queue entirely, so 100% of CE PS Cap goes to Standard
-      maxCapStdPS = effCap;
-  }
+  // Decoupled from demand and PFA splits. Feeds 100% of Effective Capacity directly down the Standard funnel.
+  const maxCapStdPS = effCap;
   
   const maxCapStdFunnel = stdFunnel(maxCapStdPS,
     rv('psComp')/100, rv('siRate')/100, rv('schedRate')/100,
@@ -484,9 +476,9 @@ function update() {
     ['Enrolled',          demandStd.enrolled],
   ], 'bar-std');
 
-  // Capacity funnel — standard CE (Theoretical Maximum based purely on effCap)
+  // Capacity funnel — standard CE (Theoretical Maximum based purely on 100% of effCap)
   bar('f-std-cap', [
-    ['CE PS Base Capacity', maxCapStdFunnel.ps],
+    ['Effective Capacity', maxCapStdFunnel.ps],
     ['PS Completed',       maxCapStdFunnel.psCompleted],
     ['Screened In',        maxCapStdFunnel.screenedIn],
     ['Eval Scheduled',     maxCapStdFunnel.evalSched],
@@ -494,7 +486,7 @@ function update() {
     ['Enrolled',           maxCapStdFunnel.enrolled],
   ], 'bar-cap');
 
-  // PFA path (Kept as Actual Realized since it's an additive component)
+  // PFA path (Actual Realized)
   document.getElementById('pfa-funnel-title').textContent = selMode==='future'
     ? 'PFA-Converted Path (Bypasses CE PS → Enters CE Eval)'
     : 'PFA-Converted Path (Enters CE PS Queue)';

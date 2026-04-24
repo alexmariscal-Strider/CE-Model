@@ -1,532 +1,568 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CE + PFA Pathway Capacity Model</title>
-    <style>
-        :root {
-            --bg-color: #0b0e14;
-            --panel-bg: #1c1f2e;
-            --panel-border: #2c314a;
-            --text-main: #d1d5db;
-            --text-muted: #8b949e;
-            --accent-blue: #3b82f6;
-            --accent-purple: #8b5cf6;
-            --accent-cyan: #06b6d4;
-            --accent-orange: #f59e0b;
-            --accent-red: #ef4444;
-            --accent-green: #10b981;
-        }
+<meta charset="UTF-8">
+<title>CE + PFA Pathway Capacity Model</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; padding: 20px; font-size: 13px; }
+  h1 { font-size: 17px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; }
+  .subtitle { color: #94a3b8; font-size: 12px; margin-bottom: 16px; }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        
-        body { background-color: var(--bg-color); color: var(--text-main); font-size: 13px; }
-        
-        .header { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--panel-border); background-color: var(--panel-bg); }
-        .header h1 { font-size: 18px; font-weight: 600; margin-right: 20px; }
-        .pathway-toggles { display: flex; gap: 10px; background: var(--bg-color); padding: 4px; border-radius: 6px; }
-        .pathway-toggles label { padding: 6px 12px; cursor: pointer; border-radius: 4px; font-weight: 500; transition: 0.2s; }
-        .pathway-toggles input { display: none; }
-        .pathway-toggles input:checked + label { background-color: var(--accent-blue); color: white; }
+  .month-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  .month-bar-label { font-size: 11px; color: #64748b; margin-right: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+  .month-btn { padding: 5px 11px; border-radius: 6px; border: 1px solid #2d3548; background: #1e2330; color: #94a3b8; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+  .month-btn:hover { border-color: #6366f1; color: #c7d2fe; }
+  .month-btn.active { background: #312e81; border-color: #6366f1; color: #e0e7ff; font-weight: 600; }
 
-        .month-tabs { display: flex; padding: 10px 20px; gap: 5px; background: var(--bg-color); }
-        .month-tab { background: var(--panel-bg); border: 1px solid var(--panel-border); color: var(--text-muted); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 600; }
-        .month-tab.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+  .mode-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .mode-label { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+  .mode-bar { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid #2d3548; }
+  .mode-btn { padding: 7px 16px; background: #1e2330; color: #94a3b8; font-size: 12px; cursor: pointer; border: none; transition: all 0.15s; font-weight: 500; white-space: nowrap; }
+  .mode-btn:hover { background: #252c3f; color: #e2e8f0; }
+  .mode-btn.active-current { background: #1e3a5f; color: #93c5fd; font-weight: 700; }
+  .mode-btn.active-future  { background: #14532d; color: #86efac; font-weight: 700; }
 
-        .layout { display: flex; height: calc(100vh - 110px); }
-        
-        /* Sidebar */
-        .sidebar { width: 320px; background: var(--panel-bg); border-right: 1px solid var(--panel-border); padding: 15px; overflow-y: auto; }
-        .section-title { font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; margin: 15px 0 10px 0; border-bottom: 1px solid var(--panel-border); padding-bottom: 5px; }
-        .input-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .input-group label { width: 60%; font-weight: 500; }
-        .input-group input[type="number"] { width: 35%; background: var(--bg-color); border: 1px solid var(--panel-border); color: white; padding: 4px 8px; border-radius: 4px; text-align: right; }
-        .input-group input[type="range"] { width: 100%; margin-top: 5px; cursor: pointer; }
-        .slider-group { margin-bottom: 12px; }
-        .slider-header { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: 500; }
-        .read-only { color: var(--accent-cyan); font-weight: bold; }
+  .grid { display: grid; grid-template-columns: 340px 1fr; gap: 16px; }
+  .panel { background: #1e2330; border-radius: 10px; padding: 16px; border: 1px solid #2d3548; }
+  .panel h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 12px; }
 
-        /* Main Content */
-        .main-content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
-        
-        .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-        .kpi-card { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 6px; padding: 15px; }
-        .kpi-card h3 { font-size: 10px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-        .kpi-value { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
-        .kpi-sub { font-size: 11px; color: var(--text-muted); }
+  .section-label { font-size: 11px; font-weight: 600; color: #7c8db0; text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 8px; border-top: 1px solid #2d3548; padding-top: 10px; }
+  .section-label:first-child { margin-top: 0; border-top: none; padding-top: 0; }
 
-        .panel { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 6px; padding: 15px; }
-        .panel-title { font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 15px; }
-        
-        .target-table { display: flex; justify-content: space-between; text-align: center; border-bottom: 1px solid var(--panel-border); padding-bottom: 15px; margin-bottom: 15px; }
-        .target-col { flex: 1; }
-        .target-col .val { font-size: 18px; font-weight: 700; margin-top: 5px; }
-        .red-text { color: var(--accent-red); }
-        .green-text { color: var(--accent-green); }
+  .input-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+  .input-row label { color: #cbd5e1; font-size: 12px; flex: 1; line-height: 1.35; }
+  .input-row input[type=range]  { width: 84px; accent-color: #6366f1; flex-shrink: 0; }
+  .input-row input[type=number] { width: 72px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 5px; color: #f1f5f9; padding: 3px 6px; font-size: 12px; text-align: right; flex-shrink: 0; }
+  .val-badge { min-width: 40px; text-align: right; font-size: 12px; font-weight: 600; color: #a5b4fc; flex-shrink: 0; }
+  .ro-val    { min-width: 60px; text-align: right; font-size: 12px; font-weight: 600; color: #f1f5f9; background: #0f1117; border: 1px solid #2d3548; border-radius: 5px; padding: 3px 7px; flex-shrink: 0; }
 
-        /* Funnel Charts */
-        .funnel-container { display: flex; gap: 40px; }
-        .funnel-col { flex: 1; }
-        .funnel-row { display: flex; align-items: center; margin-bottom: 12px; position: relative; }
-        .funnel-label { width: 120px; font-size: 12px; }
-        .funnel-bar-bg { flex: 1; background: var(--bg-color); height: 20px; border-radius: 3px; position: relative; overflow: hidden; display: flex; align-items: center; padding: 0 10px; }
-        .funnel-bar-fill { position: absolute; left: 0; top: 0; height: 100%; z-index: 1; }
-        .funnel-val { position: relative; z-index: 2; font-weight: 600; font-size: 11px; text-shadow: 0px 0px 4px rgba(0,0,0,0.8); }
-        
-        .bg-purple { background: var(--accent-purple); }
-        .bg-cyan { background: var(--accent-cyan); }
-        .bg-orange { background: var(--accent-orange); }
+  .badge-current { display:inline-block; font-size:10px; padding:1px 6px; border-radius:4px; background:#1e3a5f; color:#93c5fd; font-weight:700; margin-left:5px; vertical-align:middle; }
+  .badge-future  { display:inline-block; font-size:10px; padding:1px 6px; border-radius:4px; background:#14532d; color:#86efac; font-weight:700; margin-left:5px; vertical-align:middle; }
+  .hint { font-size:11px; color:#64748b; margin-bottom:8px; line-height:1.5; }
 
-        .status-msg { padding: 10px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--accent-green); color: var(--accent-green); font-size: 12px; margin-bottom: 15px; }
-        .status-msg.error { background: rgba(239, 68, 68, 0.1); border-color: var(--accent-red); color: var(--accent-red); }
+  /* KEY METRICS */
+  .results-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+  .stat-card { background: #252c3f; border-radius: 8px; padding: 12px; border: 1px solid #2d3548; }
+  .stat-card.hl  { border-color: #6366f1; background: #1e1f3a; }
+  .stat-card.grn { border-color: #22c55e; background: #0f2a1a; }
+  .stat-card.yel { border-color: #f59e0b; background: #271e0a; }
+  .stat-card.red { border-color: #ef4444; background: #2a0f0f; }
+  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 700; color: #f1f5f9; }
+  .stat-sub   { font-size: 11px; color: #64748b; margin-top: 2px; }
 
-        hr { border: none; border-top: 1px solid var(--panel-border); margin: 15px 0; }
-    </style>
+  /* ENROLLMENT TARGET BANNER */
+  .target-banner { display:flex; align-items:center; gap:16px; background:#1a1f30; border:1px solid #2d3548; border-radius:8px; padding:10px 14px; margin-bottom:4px; flex-wrap:wrap; }
+  .tb-item { display:flex; flex-direction:column; align-items:center; }
+  .tb-label { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#64748b; margin-bottom:2px; }
+  .tb-val   { font-size:18px; font-weight:700; color:#f1f5f9; }
+  .tb-sep   { width:1px; height:36px; background:#2d3548; }
+  .tb-delta-pos { font-size:13px; font-weight:700; color:#22c55e; }
+  .tb-delta-neg { font-size:13px; font-weight:700; color:#ef4444; }
+  .tb-delta-neu { font-size:13px; font-weight:700; color:#94a3b8; }
+
+  /* DUAL FUNNEL */
+  .funnel-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+  .funnel-section { margin-bottom: 0; }
+  .funnel-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; margin-bottom:8px; }
+  .funnel-title.std-col  { color: #6366f1; }
+  .funnel-title.cap-col  { color: #06b6d4; }
+  .funnel-title.pfa-col  { color: #f59e0b; }
+  .funnel-title.comb-col { color: #22c55e; }
+
+  .funnel-row { display: flex; align-items: center; margin-bottom: 5px; gap: 8px; }
+  .funnel-lbl { width: 145px; font-size: 11px; color: #94a3b8; flex-shrink: 0; }
+  .funnel-bar-wrap { flex:1; background:#0f1117; border-radius:3px; height:20px; overflow:hidden; position:relative; }
+  .funnel-bar { height:100%; border-radius:3px; transition:width .3s; display:flex; align-items:center; padding-left:8px; min-width:36px; }
+  .funnel-bar span { font-size:11px; font-weight:600; color:#fff; white-space:nowrap; }
+  .bar-std  { background: linear-gradient(90deg,#4f46e5,#6366f1); }
+  .bar-cap  { background: linear-gradient(90deg,#0891b2,#06b6d4); }
+  .bar-pfa  { background: linear-gradient(90deg,#d97706,#f59e0b); }
+  .bar-comb { background: linear-gradient(90deg,#16a34a,#22c55e); }
+  .cap-line { position:absolute; top:0; bottom:0; width:2px; background:#ef4444; opacity:.85; pointer-events:none; }
+
+  .funnel-compare-note { font-size:11px; color:#64748b; background:#151b28; border-radius:6px; padding:8px 10px; margin-bottom:14px; border-left:3px solid #2d3548; line-height:1.5; }
+
+  /* TABLES */
+  .capacity-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .capacity-table th { text-align:left; color:#64748b; font-weight:600; font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:4px 8px; border-bottom:1px solid #2d3548; }
+  .capacity-table td { padding:6px 8px; border-bottom:1px solid #1a2030; color:#cbd5e1; }
+  .capacity-table tr:last-child td { border-bottom:none; }
+  .capacity-table .em { color:#f1f5f9; font-weight:600; }
+  .capacity-table .g  { color:#22c55e; }
+  .capacity-table .w  { color:#f59e0b; }
+  .capacity-table .b  { color:#ef4444; }
+
+  .divider { border:none; border-top:1px solid #2d3548; margin:14px 0; }
+  .note { font-size:11px; color:#94a3b8; background:#151b28; border-radius:6px; padding:10px 12px; border-left:3px solid #3d4a63; margin-top:12px; line-height:1.6; }
+  .note.fut { border-left-color:#22c55e; }
+  .warn-box { font-size:11px; color:#fca5a5; background:#2a0f0f; border-radius:5px; padding:6px 10px; margin-top:8px; display:none; }
+  .warn-box.on { display:block; }
+  .right-col { display:flex; flex-direction:column; gap:16px; }
+</style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>CE + PFA Pathway Capacity Model</h1>
-        <div class="pathway-toggles">
-            <input type="radio" id="mode-current" name="pathway_mode" value="current" checked onchange="updateModel()">
-            <label for="mode-current">Current State — PFA → CE Phone Screen</label>
-            <input type="radio" id="mode-future" name="pathway_mode" value="future" onchange="updateModel()">
-            <label for="mode-future">Future State — PFA Converts → Skip to CE Eval</label>
-        </div>
+<h1>CE + PFA Pathway Capacity Model</h1>
+<p class="subtitle">Switch pathway mode and month · Demand funnel vs. Capacity funnel shows enrollment over/under vs. target</p>
+
+<div class="mode-wrap">
+  <span class="mode-label">Pathway Mode:</span>
+  <div class="mode-bar">
+    <button class="mode-btn active-current" id="btn-current" onclick="setMode('current')">📞 Current State — PFA → CE Phone Screen</button>
+    <button class="mode-btn" id="btn-future" onclick="setMode('future')">🚀 Future State — PFA Converts → Skip to CE Eval</button>
+  </div>
+</div>
+
+<div class="month-bar">
+  <span class="month-bar-label">Month:</span>
+  <button class="month-btn active" onclick="setMonth(0)">May</button>
+  <button class="month-btn" onclick="setMonth(1)">Jun</button>
+  <button class="month-btn" onclick="setMonth(2)">Jul</button>
+  <button class="month-btn" onclick="setMonth(3)">Aug</button>
+  <button class="month-btn" onclick="setMonth(4)">Sep</button>
+  <button class="month-btn" onclick="setMonth(5)">Oct</button>
+  <button class="month-btn" onclick="setMonth(6)">Nov</button>
+  <button class="month-btn" onclick="setMonth(7)">Dec</button>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Inputs</h2>
+
+    <div class="section-label">Volume</div>
+    <div class="input-row">
+      <label>Accepted Apps (projected)</label>
+      <input type="number" id="apps-input" value="1147" min="100" max="9999" step="1">
+    </div>
+    <div class="input-row">
+      <label>Enrollment Target</label>
+      <input type="number" id="enroll-target" value="327" min="0" max="9999" step="1">
+    </div>
+    <div class="input-row">
+      <label>Apps → PS Scheduling Rate</label>
+      <input type="range" id="psSchedRate" min="50" max="100" value="95" step="1">
+      <span class="val-badge" id="psSchedRate-v">95%</span>
+    </div>
+    <div class="input-row"><label>Gross PS Demand (pre-cap)</label><span class="ro-val" id="gross-ps-ro">—</span></div>
+
+    <div class="section-label">CE Capacity</div>
+    <div class="input-row">
+      <label>CE PS Capacity (base)</label>
+      <input type="number" id="psCap" value="1008" min="100" max="3000" step="10">
+    </div>
+    <div class="input-row">
+      <label>PTO Days (this month)<br><span style="color:#64748b;font-size:10px;">× 3.75 PS per day = PS reduction</span></label>
+      <input type="number" id="ptoDays" value="0" min="0" max="200" step="0.5">
+    </div>
+    <div class="input-row"><label>PS Lost to PTO</label><span class="ro-val" id="pto-ps-ro">—</span></div>
+    <div class="input-row"><label>Effective CE PS Capacity</label><span class="ro-val" id="eff-cap-ro" style="color:#06b6d4;">—</span></div>
+
+    <div class="input-row" style="margin-top:8px;">
+      <label>% Apps Diverted to PFA</label>
+      <input type="range" id="pfaPct" min="0" max="40" value="10" step="1">
+      <span class="val-badge" id="pfaPct-v">10%</span>
     </div>
 
-    <div class="month-tabs" id="month-tabs">
-        </div>
+    <div class="section-label">Standard CE Funnel Rates</div>
+    <div class="input-row"><label>PS Completion Rate</label><input type="range" id="psComp" min="50" max="100" value="74" step="1"><span class="val-badge" id="psComp-v">74%</span></div>
+    <div class="input-row"><label>Screened-In Rate</label><input type="range" id="siRate" min="50" max="100" value="86" step="1"><span class="val-badge" id="siRate-v">86%</span></div>
+    <div class="input-row"><label>PS → Eval Scheduling</label><input type="range" id="schedRate" min="50" max="100" value="78" step="1"><span class="val-badge" id="schedRate-v">78%</span></div>
+    <div class="input-row"><label>Eval Completion Rate</label><input type="range" id="evalComp" min="50" max="100" value="78" step="1"><span class="val-badge" id="evalComp-v">78%</span></div>
+    <div class="input-row"><label>Eval → Enrollment Rate</label><input type="range" id="enrollRate" min="50" max="100" value="80" step="1"><span class="val-badge" id="enrollRate-v">80%</span></div>
 
-    <div class="layout">
-        <div class="sidebar">
-            <div class="section-title">Inputs</div>
-            
-            <div class="input-group">
-                <label>Accepted Apps (proj)</label>
-                <input type="number" id="in-apps" oninput="updateModel()">
-            </div>
-            <div class="input-group">
-                <label>Enrollment Target</label>
-                <input type="number" id="in-target" oninput="updateModel()">
-            </div>
-            
-            <div class="slider-group">
-                <div class="slider-header">
-                    <span>Apps → PS Scheduling Rate</span>
-                    <span id="val-apps-ps">95%</span>
-                </div>
-                <input type="range" id="in-apps-ps" min="50" max="100" value="95" oninput="updateSlider('in-apps-ps', 'val-apps-ps', '%'); updateModel()">
-            </div>
-
-            <div class="input-group" style="margin-top: 15px">
-                <label>Gross PS Demand (pre-cap)</label>
-                <span class="read-only" id="out-gross-demand">0</span>
-            </div>
-
-            <div class="section-title">CE Capacity</div>
-            <div class="input-group">
-                <label>CE PS Capacity (base)</label>
-                <input type="number" id="in-base-cap" oninput="updateModel()">
-            </div>
-            <div class="input-group">
-                <label title="Assumes 3.75 PS reduction per PTO day">PTO Days (this month)</label>
-                <input type="number" id="in-pto" value="0" step="0.5" oninput="updateModel()">
-            </div>
-            <div class="input-group">
-                <label>Effective CE PS Capacity</label>
-                <span class="read-only" id="out-eff-cap">0</span>
-            </div>
-
-            <div class="slider-group" style="margin-top: 15px">
-                <div class="slider-header" style="color: var(--accent-orange)">
-                    <span>% Apps Diverted to PFA</span>
-                    <span id="val-pfa-pct">0%</span>
-                </div>
-                <input type="range" id="in-pfa-pct" min="0" max="100" value="0" oninput="updateSlider('in-pfa-pct', 'val-pfa-pct', '%'); updateModel()">
-            </div>
-
-            <div class="section-title">Standard CE Funnel Rates</div>
-            <div id="std-sliders"></div>
-
-            <div class="section-title" style="color: var(--accent-orange)">PFA-Converted Rates</div>
-            <div id="pfa-sliders"></div>
-        </div>
-
-        <div class="main-content">
-            <div class="kpi-row">
-                <div class="kpi-card" style="border-left: 3px solid var(--accent-purple)">
-                    <h3>CE PS Capacity</h3>
-                    <div class="kpi-value" id="kpi-cap">0</div>
-                    <div class="kpi-sub" id="kpi-demand-sub">Projected PS Demand: 0</div>
-                </div>
-                <div class="kpi-card" style="border-left: 3px solid #eab308">
-                    <h3>PS Utilization</h3>
-                    <div class="kpi-value" id="kpi-util">0%</div>
-                    <div class="kpi-sub" id="kpi-headroom">+0 headroom</div>
-                </div>
-                <div class="kpi-card" style="border-left: 3px solid var(--accent-red)">
-                    <h3>Projected Enrollments</h3>
-                    <div class="kpi-value" id="kpi-enroll">0</div>
-                    <div class="kpi-sub" id="kpi-target-sub">Target: 0</div>
-                </div>
-                <div class="kpi-card" style="border-left: 3px solid var(--panel-border)">
-                    <h3>Total Evals Needed</h3>
-                    <div class="kpi-value" id="kpi-evals">0</div>
-                    <div class="kpi-sub" id="kpi-evals-sub">Std: 0 | PFA: 0</div>
-                </div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">Enrollment Vs. Target</div>
-                <div class="target-table">
-                    <div class="target-col">
-                        <div class="panel-title">Target</div>
-                        <div class="val" id="et-target">0</div>
-                    </div>
-                    <div class="target-col">
-                        <div class="panel-title">Projected (Cap)</div>
-                        <div class="val" id="et-proj">0</div>
-                    </div>
-                    <div class="target-col">
-                        <div class="panel-title">Over / Under</div>
-                        <div class="val" id="et-variance">0</div>
-                    </div>
-                    <div class="target-col">
-                        <div class="panel-title">Unconstrained Demand</div>
-                        <div class="val" id="et-unconstrained">0</div>
-                    </div>
-                    <div class="target-col">
-                        <div class="panel-title">Lost to Capacity</div>
-                        <div class="val" id="et-lost">0</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-title">Funnel Breakdown — Demand vs. Capacity</div>
-                <div id="status-banner" class="status-msg">Capacity sufficient.</div>
-                
-                <div class="funnel-container">
-                    <div class="funnel-col">
-                        <h4 style="color: var(--accent-purple); margin-bottom: 10px; font-size: 11px;">■ DEMAND — UNCONSTRAINED</h4>
-                        <div id="demand-funnel-std"></div>
-                        <br>
-                        <h4 style="color: var(--accent-orange); margin-bottom: 10px; font-size: 11px;">■ PFA PATHWAY DEMAND</h4>
-                        <div id="demand-funnel-pfa"></div>
-                    </div>
-                    
-                    <div class="funnel-col">
-                        <h4 style="color: var(--accent-cyan); margin-bottom: 10px; font-size: 11px;">✔ CAPACITY — REALIZED</h4>
-                        <div id="capacity-funnel-std"></div>
-                        <br>
-                        <h4 style="color: var(--accent-orange); margin-bottom: 10px; font-size: 11px;">✔ CAPACITY — PFA PATH</h4>
-                        <div id="capacity-funnel-pfa"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div id="sec-current">
+      <div class="section-label">PFA-Converted Rates <span class="badge-current">Current State</span></div>
+      <p class="hint">PFA patients re-enter at CE Phone Screen — same PS queue, lower quality rates expected.</p>
+      <div class="input-row"><label>PS Completion (PFA)</label><input type="range" id="pfaPsComp" min="30" max="100" value="65" step="1"><span class="val-badge" id="pfaPsComp-v">65%</span></div>
+      <div class="input-row"><label>Screened-In Rate (PFA)</label><input type="range" id="pfaSiRate" min="30" max="100" value="80" step="1"><span class="val-badge" id="pfaSiRate-v">80%</span></div>
+      <div class="input-row"><label>PS → Eval Sched. (PFA)</label><input type="range" id="pfaSchedRate" min="30" max="100" value="78" step="1"><span class="val-badge" id="pfaSchedRate-v">78%</span></div>
+      <div class="input-row"><label>Eval Completion (PFA)</label><input type="range" id="pfaEvalComp" min="30" max="100" value="78" step="1"><span class="val-badge" id="pfaEvalComp-v">78%</span></div>
+      <div class="input-row"><label>Eval → Enrollment (PFA)</label><input type="range" id="pfaEnrollRate" min="30" max="100" value="80" step="1"><span class="val-badge" id="pfaEnrollRate-v">80%</span></div>
     </div>
+
+    <div id="sec-future" style="display:none;">
+      <div class="section-label">PFA-Converted Rates <span class="badge-future">Future State</span></div>
+      <p class="hint">PFA handles its own conversion. Patients skip CE PS entirely and enter at CE Eval scheduling.</p>
+      <div class="input-row">
+        <label>PFA Conversion Rate<br><span style="color:#64748b;font-size:10px;">% of PFA apps that reach CE Eval</span></label>
+        <input type="range" id="pfaConvRate" min="10" max="90" value="55" step="1">
+        <span class="val-badge" id="pfaConvRate-v">55%</span>
+      </div>
+      <div class="input-row"><label>Eval Completion (PFA)</label><input type="range" id="pfaFutEvalComp" min="30" max="100" value="75" step="1"><span class="val-badge" id="pfaFutEvalComp-v">75%</span></div>
+      <div class="input-row"><label>Eval → Enrollment (PFA)</label><input type="range" id="pfaFutEnrollRate" min="30" max="100" value="78" step="1"><span class="val-badge" id="pfaFutEnrollRate-v">78%</span></div>
+    </div>
+  </div>
+
+  <div class="right-col">
+
+    <div class="panel">
+      <h2 id="metrics-title">Key Outputs — May · Current State</h2>
+      <div class="results-grid" id="metrics"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Enrollment vs. Target</h2>
+      <div class="target-banner" id="target-banner"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Funnel Breakdown — Demand vs. Capacity <span style="font-size:10px;color:#64748b;font-weight:400;">· red line = effective CE PS capacity</span></h2>
+      <p class="funnel-compare-note" id="funnel-note">Left: funnel off gross PS <strong>demand</strong> (what would happen with unlimited capacity). Right: funnel off actual <strong>realized throughput</strong> (constrained by whichever is lower: Demand or Capacity). Compare the two Enrolled rows to see the gap caused by the capacity ceiling.</p>
+
+      <div class="funnel-grid">
+        <div class="funnel-section">
+          <div class="funnel-title std-col">📋 Demand — Standard CE</div>
+          <div id="f-std-demand"></div>
+        </div>
+        <div class="funnel-section">
+          <div class="funnel-title cap-col">✅ Realized Throughput</div>
+          <div id="f-std-cap"></div>
+        </div>
+      </div>
+
+      <div class="funnel-section" style="margin-bottom:14px;">
+        <div class="funnel-title pfa-col" id="pfa-funnel-title">PFA-Converted Path</div>
+        <div id="f-pfa"></div>
+      </div>
+
+      <hr class="divider">
+      <div class="funnel-section">
+        <div class="funnel-title comb-col">Combined Output</div>
+        <div id="f-comb"></div>
+      </div>
+      <div class="warn-box" id="warn-box">⚠️ Gross PS demand exceeds effective CE capacity — throughput is capped and demand funnel shows unconstrained potential.</div>
+    </div>
+
+    <div class="panel">
+      <h2>CE Phone Screen Capacity Summary</h2>
+      <table class="capacity-table" id="cap-table"></table>
+      <div class="note" id="cap-note"></div>
+    </div>
+
+  </div>
+</div>
 
 <script>
-    // Configuration Data (From Prompt)
-    const monthlyData = {
-        'May': { apps: 1147, target: 327, capacity: 1008 },
-        'Jun': { apps: 1088, target: 348, capacity: 1124 },
-        'Jul': { apps: 1091, target: 349, capacity: 1142 },
-        'Aug': { apps: 1163, target: 370, capacity: 1128 },
-        'Sep': { apps: 1407, target: 403, capacity: 1124 },
-        'Oct': { apps: 1496, target: 466, capacity: 1344 },
-        'Nov': { apps: 1435, target: 528, capacity: 1288 },
-        'Dec': { apps: 1346, target: 529, capacity: 1228 }
-    };
+// ── MONTHLY DATA ─────────────────────────────────────────────────────
+const MONTHS       = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const PROJ_APPS    = [1147, 1088, 1091, 1163, 1407, 1496, 1435, 1346];
+const ENROLL_TGTS  = [327,  348,  349,  370,  403,  466,  528,  529];
+const PS_CAPS      = [1008, 1124, 1142, 1128, 1124, 1344, 1288, 1228];
+// PTO array zeroed out per user request (base capacity already includes it)
+const PTO_DAYS     = [0,    0,    0,    0,    0,    0,    0,    0   ];
+const PTO_PS_RATE  = 3.75;
 
-    let currentMonth = 'Jul';
+let selMonth = 0;
+let selMode  = 'current';
 
-    // Rate Configs
-    const rates = {
-        std: [
-            { id: 'std-ps-comp', label: 'PS Completion Rate', def: 74 },
-            { id: 'std-scr-in', label: 'Screened-In Rate', def: 86 },
-            { id: 'std-ev-sch', label: 'PS → Eval Scheduling', def: 78 },
-            { id: 'std-ev-comp', label: 'Eval Completion Rate', def: 78 },
-            { id: 'std-ev-enr', label: 'Eval → Enrollment Rate', def: 80 }
-        ],
-        pfa: [
-            { id: 'pfa-ps-comp', label: 'PS Completion (PFA)', def: 65 },
-            { id: 'pfa-scr-in', label: 'Screened-In Rate (PFA)', def: 80 },
-            { id: 'pfa-ev-sch', label: 'PS → Eval Sched. (PFA)', def: 78 },
-            { id: 'pfa-ev-comp', label: 'Eval Completion (PFA)', def: 78 },
-            { id: 'pfa-ev-enr', label: 'Eval → Enrollment (PFA)', def: 80 }
-        ]
-    };
+const fmt = n => Math.round(n).toLocaleString();
+const fmtD = n => n.toFixed(1);
+const pct  = n => n.toFixed(1) + '%';
+const rv   = id => parseFloat(document.getElementById(id).value);
 
-    // Initialize UI
-    function init() {
-        // Build Tabs
-        const tabsDiv = document.getElementById('month-tabs');
-        Object.keys(monthlyData).forEach(m => {
-            let btn = document.createElement('div');
-            btn.className = `month-tab ${m === currentMonth ? 'active' : ''}`;
-            btn.innerText = m;
-            btn.onclick = () => selectMonth(m);
-            tabsDiv.appendChild(btn);
-        });
+// ── MONTH / MODE ─────────────────────────────────────────────────────
+function setMonth(idx) {
+  selMonth = idx;
+  document.querySelectorAll('.month-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+  document.getElementById('apps-input').value   = PROJ_APPS[idx];
+  document.getElementById('enroll-target').value = ENROLL_TGTS[idx];
+  document.getElementById('psCap').value         = PS_CAPS[idx];
+  document.getElementById('ptoDays').value       = PTO_DAYS[idx];
+  update();
+}
 
-        // Build Sliders
-        buildSliders('std-sliders', rates.std);
-        buildSliders('pfa-sliders', rates.pfa);
+function setMode(mode) {
+  selMode = mode;
+  document.getElementById('btn-current').className = 'mode-btn' + (mode==='current' ? ' active-current' : '');
+  document.getElementById('btn-future').className  = 'mode-btn' + (mode==='future'  ? ' active-future'  : '');
+  document.getElementById('sec-current').style.display = mode==='current' ? '' : 'none';
+  document.getElementById('sec-future').style.display  = mode==='future'  ? '' : 'none';
+  update();
+}
 
-        loadMonthData();
-    }
+// ── FUNNEL CALC ──────────────────────────────────────────────────────
+function stdFunnel(ps, psC, si, sch, evC, enR) {
+  const psCompleted = ps * psC;
+  const screenedIn  = psCompleted * si;
+  const evalSched   = screenedIn * sch;
+  const evalComp    = evalSched * evC;
+  const enrolled    = evalComp * enR;
+  return { ps, psCompleted, screenedIn, evalSched, evalComp, enrolled };
+}
 
-    function buildSliders(containerId, rateArr) {
-        const container = document.getElementById(containerId);
-        rateArr.forEach(r => {
-            container.innerHTML += `
-                <div class="slider-group">
-                    <div class="slider-header">
-                        <span>${r.label}</span>
-                        <span id="val-${r.id}">${r.def}%</span>
-                    </div>
-                    <input type="range" id="${r.id}" min="0" max="100" value="${r.def}" oninput="updateSlider('${r.id}', 'val-${r.id}', '%'); updateModel()">
-                </div>
-            `;
-        });
-    }
+function pfaFutureFunnel(apps, conv, evC, enR) {
+  const evalSched = apps * conv;
+  const evalComp  = evalSched * evC;
+  const enrolled  = evalComp * enR;
+  return { ps:0, psCompleted:0, screenedIn:0, evalSched, evalComp, enrolled };
+}
 
-    function selectMonth(m) {
-        currentMonth = m;
-        document.querySelectorAll('.month-tab').forEach(el => {
-            el.classList.toggle('active', el.innerText === m);
-        });
-        loadMonthData();
-    }
+// ── MAIN UPDATE ──────────────────────────────────────────────────────
+function update() {
+  const month       = MONTHS[selMonth];
+  const totalApps   = parseInt(document.getElementById('apps-input').value)    || PROJ_APPS[selMonth];
+  const enrollTgt   = parseInt(document.getElementById('enroll-target').value) || ENROLL_TGTS[selMonth];
+  const psCapBase   = rv('psCap');
+  const ptoDays     = rv('ptoDays');
+  const ptoPS       = ptoDays * PTO_PS_RATE;
+  const effCap      = Math.max(0, psCapBase - ptoPS);   // effective capacity after PTO
+  const pfaP        = rv('pfaPct') / 100;
+  const psScR       = rv('psSchedRate') / 100;
 
-    function loadMonthData() {
-        const d = monthlyData[currentMonth];
-        document.getElementById('in-apps').value = d.apps;
-        document.getElementById('in-target').value = d.target;
-        document.getElementById('in-base-cap').value = d.capacity;
-        document.getElementById('in-pto').value = 0; // Reset PTO on month change
-        updateModel();
-    }
+  // Sync slider badges
+  ['psSchedRate','pfaPct','psComp','siRate','schedRate','evalComp','enrollRate',
+   'pfaPsComp','pfaSiRate','pfaSchedRate','pfaEvalComp','pfaEnrollRate',
+   'pfaConvRate','pfaFutEvalComp','pfaFutEnrollRate'].forEach(id => {
+    const el = document.getElementById(id);
+    const v  = document.getElementById(id+'-v');
+    if (el && v) v.textContent = parseFloat(el.value)+'%';
+  });
 
-    function updateSlider(inputId, valId, suffix) {
-        document.getElementById(valId).innerText = document.getElementById(inputId).value + suffix;
-    }
+  // Computed read-only displays
+  const stdApps = Math.round(totalApps * (1 - pfaP));
+  const pfaApps = Math.round(totalApps * pfaP);
 
-    function getRate(id) { return parseFloat(document.getElementById(id).value) / 100; }
+  const grossStdPS = stdApps * psScR;
+  const grossPfaPS = selMode==='current' ? pfaApps * psScR : 0;
+  const grossTotal = grossStdPS + grossPfaPS;
 
-    function drawFunnelRow(label, value, maxVal, colorClass) {
-        let pct = maxVal > 0 ? (value / maxVal) * 100 : 0;
-        return `
-            <div class="funnel-row">
-                <div class="funnel-label">${label}</div>
-                <div class="funnel-bar-bg">
-                    <div class="funnel-bar-fill ${colorClass}" style="width: ${pct}%"></div>
-                    <div class="funnel-val">${Math.round(value).toLocaleString()}</div>
-                </div>
-            </div>
-        `;
-    }
+  document.getElementById('gross-ps-ro').textContent  = fmt(grossTotal);
+  document.getElementById('pto-ps-ro').textContent    = fmtD(ptoPS) + ' PS';
+  document.getElementById('eff-cap-ro').textContent   = fmt(effCap);
 
-    function updateModel() {
-        // 1. Gather Inputs
-        const apps = parseInt(document.getElementById('in-apps').value) || 0;
-        const target = parseInt(document.getElementById('in-target').value) || 0;
-        const appsPsRate = getRate('in-apps-ps');
-        const baseCap = parseInt(document.getElementById('in-base-cap').value) || 0;
-        const pto = parseFloat(document.getElementById('in-pto').value) || 0;
-        const pfaPct = getRate('in-pfa-pct');
-        const mode = document.querySelector('input[name="pathway_mode"]:checked').value;
+  // ── DEMAND funnel (unconstrained by cap, uses gross PS)
+  const demandStd = stdFunnel(grossStdPS,
+    rv('psComp')/100, rv('siRate')/100, rv('schedRate')/100,
+    rv('evalComp')/100, rv('enrollRate')/100);
+  const demandPfaPS = selMode==='current' ? grossPfaPS : 0;
+  const demandPfa = selMode==='current'
+    ? stdFunnel(demandPfaPS, rv('pfaPsComp')/100, rv('pfaSiRate')/100,
+        rv('pfaSchedRate')/100, rv('pfaEvalComp')/100, rv('pfaEnrollRate')/100)
+    : pfaFutureFunnel(pfaApps, rv('pfaConvRate')/100, rv('pfaFutEvalComp')/100, rv('pfaFutEnrollRate')/100);
 
-        // 2. Capacity Calc
-        const ptoReduction = pto * 3.75;
-        const effCap = Math.max(0, baseCap - ptoReduction);
-        document.getElementById('out-eff-cap').innerText = effCap.toLocaleString();
+  const demandEnrolled = demandStd.enrolled + demandPfa.enrolled;
 
-        // 3. Demand Splits
-        const totalAppsToFunnel = apps * appsPsRate;
-        const stdDemand = totalAppsToFunnel * (1 - pfaPct);
-        const pfaDemand = totalAppsToFunnel * pfaPct;
+  // ── CAPACITY funnel (Realized Throughput, constrained by effCap OR demand)
+  const overCap = grossTotal > effCap;
+  let capStd, capPfa;
+  if (!overCap) {
+    capStd = grossStdPS; capPfa = grossPfaPS;
+  } else {
+    const ratio = grossTotal > 0 ? effCap / grossTotal : 0;
+    capStd = grossStdPS * ratio;
+    capPfa = grossPfaPS * ratio;
+  }
+  const effPS = capStd + capPfa;
 
-        // Gross PS Demand changes based on mode
-        let grossPsDemand = 0;
-        if (mode === 'current') {
-            grossPsDemand = stdDemand + pfaDemand; // PFA goes to PS
-        } else {
-            grossPsDemand = stdDemand; // PFA skips PS
-        }
-        
-        document.getElementById('out-gross-demand').innerText = Math.round(grossPsDemand).toLocaleString();
+  const capStdFunnel = stdFunnel(capStd,
+    rv('psComp')/100, rv('siRate')/100, rv('schedRate')/100,
+    rv('evalComp')/100, rv('enrollRate')/100);
 
-        // 4. Unconstrained Funnel Math (Demand)
-        let sRate = {
-            psC: getRate('std-ps-comp'), scr: getRate('std-scr-in'), 
-            evS: getRate('std-ev-sch'), evC: getRate('std-ev-comp'), enr: getRate('std-ev-enr')
-        };
-        let pRate = {
-            psC: getRate('pfa-ps-comp'), scr: getRate('pfa-scr-in'), 
-            evS: getRate('pfa-ev-sch'), evC: getRate('pfa-ev-comp'), enr: getRate('pfa-ev-enr')
-        };
+  let capPfaFunnel;
+  if (selMode==='current') {
+    capPfaFunnel = stdFunnel(capPfa, rv('pfaPsComp')/100, rv('pfaSiRate')/100,
+      rv('pfaSchedRate')/100, rv('pfaEvalComp')/100, rv('pfaEnrollRate')/100);
+  } else {
+    capPfaFunnel = pfaFutureFunnel(pfaApps, rv('pfaConvRate')/100,
+      rv('pfaFutEvalComp')/100, rv('pfaFutEnrollRate')/100);
+  }
 
-        // Standard
-        let d_std_ps = stdDemand;
-        let d_std_ps_c = d_std_ps * sRate.psC;
-        let d_std_scr = d_std_ps_c * sRate.scr;
-        let d_std_evs = d_std_scr * sRate.evS;
-        let d_std_evc = d_std_evs * sRate.evC;
-        let d_std_enr = d_std_evc * sRate.enr;
+  const capEnrolled  = capStdFunnel.enrolled + capPfaFunnel.enrolled;
+  const totalEvals   = capStdFunnel.evalSched + capPfaFunnel.evalSched;
+  const psUtil       = (effPS / effCap) * 100;
+  const psHead       = effCap - grossTotal; // True headroom is capacity minus demand
+  const slotsFreed   = selMode==='future' ? Math.round(pfaApps * psScR) : 0;
 
-        // PFA
-        let d_pfa_ps = 0, d_pfa_ps_c = 0, d_pfa_scr = 0, d_pfa_evs = 0, d_pfa_evc = 0, d_pfa_enr = 0;
-        if (mode === 'current') {
-            d_pfa_ps = pfaDemand;
-            d_pfa_ps_c = d_pfa_ps * pRate.psC;
-            d_pfa_scr = d_pfa_ps_c * pRate.scr;
-            d_pfa_evs = d_pfa_scr * pRate.evS;
-            d_pfa_evc = d_pfa_evs * pRate.evC;
-            d_pfa_enr = d_pfa_evc * pRate.enr;
-        } else {
-            // Future: PFA skips PS, lands straight at Eval Sched
-            d_pfa_evs = pfaDemand; 
-            d_pfa_evc = d_pfa_evs * pRate.evC;
-            d_pfa_enr = d_pfa_evc * pRate.enr;
-        }
+  // Enrollment deltas
+  const enrollVsTarget   = capEnrolled - enrollTgt;
+  const enrollDemandGap  = demandEnrolled - capEnrolled; // what cap is costing us
 
-        let total_unconstrained_enroll = d_std_enr + d_pfa_enr;
+  // ── METRICS TITLE
+  document.getElementById('metrics-title').textContent =
+    `Key Outputs — ${month} · ${selMode==='current' ? 'Current State' : 'Future State'}`;
 
-        // 5. Constrained Funnel Math (Capacity)
-        // Cap applies at the Phone Screen bottleneck
-        let ps_constraint_ratio = effCap > 0 ? Math.min(1, effCap / grossPsDemand) : 0;
-        if(grossPsDemand === 0) ps_constraint_ratio = 1;
+  // ── KEY METRICS CARDS
+  const uC = psUtil>100 ? 'red' : psUtil>90 ? 'yel' : 'grn';
+  const freeCard = selMode==='future'
+    ? `<div class="stat-card grn">
+        <div class="stat-label">CE PS Slots Freed</div>
+        <div class="stat-value">${fmt(slotsFreed)}</div>
+        <div class="stat-sub">PFA patients bypass PS entirely</div>
+       </div>`
+    : `<div class="stat-card">
+        <div class="stat-label">Apps via PFA (in PS queue)</div>
+        <div class="stat-value">${fmt(pfaApps)}</div>
+        <div class="stat-sub">Still consume CE PS capacity</div>
+       </div>`;
 
-        let c_std_ps = d_std_ps * ps_constraint_ratio;
-        let c_std_ps_c = c_std_ps * sRate.psC;
-        let c_std_scr = c_std_ps_c * sRate.scr;
-        let c_std_evs = c_std_scr * sRate.evS;
-        let c_std_evc = c_std_evs * sRate.evC;
-        let c_std_enr = c_std_evc * sRate.enr;
+  document.getElementById('metrics').innerHTML = `
+    <div class="stat-card hl">
+      <div class="stat-label">CE PS Capacity</div>
+      <div class="stat-value">${fmt(effCap)}</div>
+      <div class="stat-sub">Projected PS Demand: ${fmt(grossTotal)}${overCap ? ' ⚠️' : ''}</div>
+    </div>
+    <div class="stat-card ${uC}">
+      <div class="stat-label">PS Utilization</div>
+      <div class="stat-value">${pct(psUtil)}</div>
+      <div class="stat-sub">${psHead>=0 ? '+'+fmt(psHead)+' headroom' : fmt(Math.abs(psHead))+' shortfall'}</div>
+    </div>
+    <div class="stat-card ${capEnrolled >= enrollTgt ? 'grn' : 'red'}">
+      <div class="stat-label">Projected Enrollments</div>
+      <div class="stat-value">${fmt(capEnrolled)}</div>
+      <div class="stat-sub">Target: ${fmt(enrollTgt)}</div>
+    </div>
+    ${freeCard}
+    <div class="stat-card">
+      <div class="stat-label">Total Evals Needed</div>
+      <div class="stat-value">${fmt(totalEvals)}</div>
+      <div class="stat-sub">Std: ${fmt(capStdFunnel.evalSched)} · PFA: ${fmt(capPfaFunnel.evalSched)}</div>
+    </div>
+    <div class="stat-card ${enrollDemandGap > 5 ? 'yel' : ''}">
+      <div class="stat-label">Enrollments Lost to Cap</div>
+      <div class="stat-value">${fmt(enrollDemandGap)}</div>
+      <div class="stat-sub">Demand: ${fmt(demandEnrolled)} vs Cap: ${fmt(capEnrolled)}</div>
+    </div>`;
 
-        let c_pfa_ps = 0, c_pfa_ps_c = 0, c_pfa_scr = 0, c_pfa_evs = 0, c_pfa_evc = 0, c_pfa_enr = 0;
-        if (mode === 'current') {
-            c_pfa_ps = d_pfa_ps * ps_constraint_ratio;
-            c_pfa_ps_c = c_pfa_ps * pRate.psC;
-            c_pfa_scr = c_pfa_ps_c * pRate.scr;
-            c_pfa_evs = c_pfa_scr * pRate.evS;
-            c_pfa_evc = c_pfa_evs * pRate.evC;
-            c_pfa_enr = c_pfa_evc * pRate.enr;
-        } else {
-            // Skips PS, so not constrained by CE PS capacity. 
-            // (Assuming sufficient CE Eval capacity for now)
-            c_pfa_evs = d_pfa_evs;
-            c_pfa_evc = c_pfa_evs * pRate.evC;
-            c_pfa_enr = c_pfa_evc * pRate.enr;
-        }
+  // ── ENROLLMENT VS TARGET BANNER
+  const evtC = enrollVsTarget >= 0 ? 'tb-delta-pos' : 'tb-delta-neg';
+  const edgC = enrollDemandGap > 5 ? 'tb-delta-neg' : 'tb-delta-neu';
+  document.getElementById('target-banner').innerHTML = `
+    <div class="tb-item"><div class="tb-label">Target</div><div class="tb-val">${fmt(enrollTgt)}</div></div>
+    <div class="tb-sep"></div>
+    <div class="tb-item"><div class="tb-label">Projected (Cap)</div><div class="tb-val">${fmt(capEnrolled)}</div></div>
+    <div class="tb-sep"></div>
+    <div class="tb-item"><div class="tb-label">Over / Under Target</div><div class="${evtC}" style="font-size:20px;">${enrollVsTarget>=0?'+':''}${fmt(enrollVsTarget)}</div></div>
+    <div class="tb-sep"></div>
+    <div class="tb-item"><div class="tb-label">Unconstrained (Demand)</div><div class="tb-val" style="color:#94a3b8;">${fmt(demandEnrolled)}</div></div>
+    <div class="tb-sep"></div>
+    <div class="tb-item"><div class="tb-label">Lost to Capacity</div><div class="${edgC}" style="font-size:20px;">${enrollDemandGap > 0 ? '-' : ''}${fmt(enrollDemandGap)}</div></div>`;
 
-        let total_constrained_enroll = Math.round(c_std_enr + c_pfa_enr);
-        let lost_to_cap = Math.round(total_unconstrained_enroll - total_constrained_enroll);
+  // ── FUNNEL BARS
+  const maxBar = Math.max(totalApps * 1.05, effCap * 1.05, grossTotal * 1.05);
+  const capLinePct = (effCap / maxBar * 100).toFixed(1);
 
-        // 6. Update Top KPIs
-        let util = grossPsDemand > 0 ? (grossPsDemand / effCap) * 100 : 0;
-        let headroom = effCap - grossPsDemand;
-        
-        document.getElementById('kpi-cap').innerText = effCap.toLocaleString();
-        document.getElementById('kpi-demand-sub').innerText = `Projected PS Demand: ${Math.round(grossPsDemand)}`;
-        
-        document.getElementById('kpi-util').innerText = (util === Infinity ? 0 : util).toFixed(1) + '%';
-        document.getElementById('kpi-headroom').innerText = `${headroom > 0 ? '+' : ''}${Math.round(headroom)} headroom`;
-        document.getElementById('kpi-headroom').style.color = headroom < 0 ? 'var(--accent-red)' : 'var(--text-muted)';
-        
-        document.getElementById('kpi-enroll').innerText = total_constrained_enroll.toLocaleString();
-        document.getElementById('kpi-target-sub').innerText = `Target: ${target}`;
+  function bar(containerId, rows, cls, showCapLine) {
+    document.getElementById(containerId).innerHTML = rows.map(([lbl, val]) => {
+      const w = Math.max(val>0?2:0, Math.min(100,(val/maxBar)*100)).toFixed(1);
+      const cl = showCapLine ? `<div class="cap-line" style="left:${capLinePct}%"></div>` : '';
+      return `<div class="funnel-row">
+        <div class="funnel-lbl">${lbl}</div>
+        <div class="funnel-bar-wrap">${cl}
+          <div class="funnel-bar ${cls}" style="width:${w}%"><span>${fmt(val)}</span></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
 
-        let evalsNeeded = Math.round(c_std_evs + c_pfa_evs);
-        document.getElementById('kpi-evals').innerText = evalsNeeded.toLocaleString();
-        document.getElementById('kpi-evals-sub').innerText = `Std: ${Math.round(c_std_evs)} | PFA: ${Math.round(c_pfa_evs)}`;
+  // Demand funnel — standard CE (unconstrained)
+  bar('f-std-demand', [
+    ['PS Demand (Std)',    demandStd.ps],
+    ['PS Completed',      demandStd.psCompleted],
+    ['Screened In',       demandStd.screenedIn],
+    ['Eval Scheduled',    demandStd.evalSched],
+    ['Eval Completed',    demandStd.evalComp],
+    ['Enrolled',          demandStd.enrolled],
+  ], 'bar-std', true);
 
-        // 7. Update Target Table
-        let variance = total_constrained_enroll - target;
-        document.getElementById('et-target').innerText = target;
-        document.getElementById('et-proj').innerText = total_constrained_enroll;
-        
-        let varEl = document.getElementById('et-variance');
-        varEl.innerText = variance > 0 ? `+${variance}` : variance;
-        varEl.className = 'val ' + (variance < 0 ? 'red-text' : 'green-text');
+  // Capacity funnel — standard CE (Realized Throughput)
+  bar('f-std-cap', [
+    ['PS Scheduled (Std)', capStdFunnel.ps],
+    ['PS Completed',       capStdFunnel.psCompleted],
+    ['Screened In',        capStdFunnel.screenedIn],
+    ['Eval Scheduled',     capStdFunnel.evalSched],
+    ['Eval Completed',     capStdFunnel.evalComp],
+    ['Enrolled',           capStdFunnel.enrolled],
+  ], 'bar-cap', true);
 
-        document.getElementById('et-unconstrained').innerText = Math.round(total_unconstrained_enroll);
-        document.getElementById('et-lost').innerText = lost_to_cap;
+  // PFA path
+  document.getElementById('pfa-funnel-title').textContent = selMode==='future'
+    ? 'PFA-Converted Path  (Bypasses CE PS → Enters CE Eval)'
+    : 'PFA-Converted Path  (Enters CE PS Queue)';
 
-        // Status Banner
-        let banner = document.getElementById('status-banner');
-        if (headroom < 0) {
-            banner.className = 'status-msg error';
-            banner.innerHTML = `⚠️ <b>Capacity Insufficient:</b> Gross PS demand (${Math.round(grossPsDemand)}) exceeds effective capacity (${Math.round(effCap)}). Enrollment loss: ${lost_to_cap} patients.`;
-        } else {
-            banner.className = 'status-msg';
-            banner.innerHTML = `✔ <b>Capacity Sufficient:</b> Gross PS demand (${Math.round(grossPsDemand)}) fits within effective capacity (${Math.round(effCap)}). No enrollment loss from PS ceiling.`;
-        }
+  if (selMode==='current') {
+    bar('f-pfa', [
+      ['PS Scheduled (PFA)', capPfaFunnel.ps],
+      ['PS Completed',       capPfaFunnel.psCompleted],
+      ['Screened In',        capPfaFunnel.screenedIn],
+      ['Eval Scheduled',     capPfaFunnel.evalSched],
+      ['Eval Completed',     capPfaFunnel.evalComp],
+      ['Enrolled',           capPfaFunnel.enrolled],
+    ], 'bar-pfa', true);
+  } else {
+    bar('f-pfa', [
+      ['PFA Apps Diverted',  pfaApps],
+      ['Converted → Eval',   capPfaFunnel.evalSched],
+      ['Eval Completed',     capPfaFunnel.evalComp],
+      ['Enrolled',           capPfaFunnel.enrolled],
+    ], 'bar-pfa', false);
+  }
 
-        // 8. Render Funnels
-        let maxFunnelVol = Math.max(d_std_ps + d_pfa_ps, c_std_ps + c_pfa_ps, totalAppsToFunnel); // dynamic scale
+  // Combined
+  bar('f-comb', [
+    ['Total PS Demand',    grossTotal],
+    ['Total PS Scheduled', effPS],
+    ['Total Evals Sched.', totalEvals],
+    ['Target Enrollment',  enrollTgt],
+    ['Projected Enrolled', capEnrolled],
+  ], 'bar-comb', true);
 
-        let html_d_std = `
-            ${drawFunnelRow('PS Demand (Std)', d_std_ps, maxFunnelVol, 'bg-purple')}
-            ${drawFunnelRow('PS Completed', d_std_ps_c, maxFunnelVol, 'bg-purple')}
-            ${drawFunnelRow('Screened In', d_std_scr, maxFunnelVol, 'bg-purple')}
-            ${drawFunnelRow('Eval Scheduled', d_std_evs, maxFunnelVol, 'bg-purple')}
-            ${drawFunnelRow('Eval Completed', d_std_evc, maxFunnelVol, 'bg-purple')}
-            ${drawFunnelRow('Enrolled', d_std_enr, maxFunnelVol, 'bg-purple')}
-        `;
-        document.getElementById('demand-funnel-std').innerHTML = html_d_std;
+  document.getElementById('warn-box').classList.toggle('on', overCap);
 
-        let html_c_std = `
-            ${drawFunnelRow('PS Scheduled (Std)', c_std_ps, maxFunnelVol, 'bg-cyan')}
-            ${drawFunnelRow('PS Completed', c_std_ps_c, maxFunnelVol, 'bg-cyan')}
-            ${drawFunnelRow('Screened In', c_std_scr, maxFunnelVol, 'bg-cyan')}
-            ${drawFunnelRow('Eval Scheduled', c_std_evs, maxFunnelVol, 'bg-cyan')}
-            ${drawFunnelRow('Eval Completed', c_std_evc, maxFunnelVol, 'bg-cyan')}
-            ${drawFunnelRow('Enrolled', c_std_enr, maxFunnelVol, 'bg-cyan')}
-        `;
-        document.getElementById('capacity-funnel-std').innerHTML = html_c_std;
+  // ── FUNNEL COMPARE NOTE
+  const fn = document.getElementById('funnel-note');
+  if (overCap) {
+    fn.innerHTML = `⚠️ <strong>Capacity constrained:</strong> Gross PS demand (${fmt(grossTotal)}) exceeds effective capacity (${fmt(effCap)}). The demand funnel shows unconstrained potential; the realized throughput funnel shows actual output. The gap costs ~<strong>${fmt(enrollDemandGap)} enrollments</strong> this month.`;
+  } else {
+    fn.innerHTML = `✅ <strong>Capacity sufficient:</strong> Gross PS demand (${fmt(grossTotal)}) fits within effective capacity (${fmt(effCap)}). Realized throughput perfectly matches demand since you are operating under the capacity ceiling.`;
+  }
 
-        let html_d_pfa = '';
-        let html_c_pfa = '';
+  // ── CAPACITY TABLE
+  let rows = '';
+  if (selMode==='current') {
+    rows = `
+      <tr><td>Standard CE Path</td><td>${fmt(stdApps)}</td><td class="em">${fmt(grossStdPS)}</td><td>${fmt(capStd)}</td><td>${pct(capStd/effCap*100)}</td></tr>
+      <tr><td>PFA-Converted Path</td><td>${fmt(pfaApps)}</td><td class="em">${fmt(grossPfaPS)}</td><td>${fmt(capPfa)}</td><td>${pct(capPfa/effCap*100)}</td></tr>`;
+  } else {
+    rows = `
+      <tr><td>Standard CE Path</td><td>${fmt(stdApps)}</td><td class="em">${fmt(grossStdPS)}</td><td>${fmt(capStd)}</td><td>${pct(capStd/effCap*100)}</td></tr>
+      <tr><td>PFA Path (bypasses PS)</td><td>${fmt(pfaApps)}</td><td class="em g">0</td><td class="g">0</td><td class="g">—</td></tr>
+      <tr><td style="color:#86efac;padding-left:18px;">↳ PS slots freed</td><td>—</td><td class="g">+${fmt(slotsFreed)}</td><td>—</td><td>—</td></tr>`;
+  }
+  document.getElementById('cap-table').innerHTML = `
+    <tr><th>Segment</th><th>Apps</th><th>PS Demand</th><th>PS Scheduled</th><th>% of Cap</th></tr>
+    ${rows}
+    <tr><td><strong>Total</strong></td><td>${fmt(totalApps)}</td><td class="em ${overCap?'b':''}">${fmt(grossTotal)}${overCap?' ⚠️':''}</td>
+      <td class="em">${fmt(effPS)}</td>
+      <td class="${psUtil>100?'b':psUtil>90?'w':'g'}">${pct(psUtil)}</td></tr>
+    <tr><td colspan="2">Base CE PS Capacity</td><td colspan="3" class="em">${fmt(psCapBase)}</td></tr>
+    <tr><td colspan="2">PTO Reduction (${fmtD(ptoDays)} days × ${PTO_PS_RATE})</td><td colspan="3" class="b">−${fmtD(ptoPS)} PS</td></tr>
+    <tr><td colspan="2"><strong>Effective CE PS Capacity</strong></td><td colspan="3" class="em g">${fmt(effCap)}</td></tr>
+    <tr><td colspan="2"><strong>Headroom / (Shortfall)</strong></td>
+      <td colspan="3" class="em ${psHead>=0?'g':'b'}">${psHead>=0?'+':''}${fmt(psHead)}</td></tr>`;
 
-        if (mode === 'current') {
-            html_d_pfa = `
-                ${drawFunnelRow('PS Demand (PFA)', d_pfa_ps, maxFunnelVol, 'bg-orange')}
-                ${drawFunnelRow('PS Completed', d_pfa_ps_c, maxFunnelVol, 'bg-orange')}
-                ${drawFunnelRow('Eval Scheduled', d_pfa_evs, maxFunnelVol, 'bg-orange')}
-                ${drawFunnelRow('Enrolled', d_pfa_enr, maxFunnelVol, 'bg-orange')}
-            `;
-            html_c_pfa = `
-                ${drawFunnelRow('PS Scheduled (PFA)', c_pfa_ps, maxFunnelVol, 'bg-orange')}
-                ${drawFunnelRow('PS Completed', c_pfa_ps_c, maxFunnelVol, 'bg-orange')}
-                ${drawFunnelRow('Eval Scheduled', c_pfa_evs, maxFunnelVol, 'bg-orange')}
-                ${drawFunnelRow('Enrolled', c_pfa_enr, maxFunnelVol, 'bg-orange')}
-            `;
-        } else {
-            html_d_pfa = `
-                ${drawFunnelRow('Eval Demand (Bypass)', d_pfa_evs, maxFunnelVol, 'bg-orange')}
-                ${drawFunnelRow('Eval Completed', d_pfa_evc, maxFunnelVol, 'bg-orange')}
-                ${drawFunnelRow('Enrolled', d_pfa_enr, maxFunnelVol, 'bg-orange')}
-            `;
-            html_c_pfa = `
-                ${drawFunnelRow('Eval Sched (Bypass)', c_pfa_evs, maxFunnelVol, 'bg-orange')}
-                ${drawFunnelRow('Eval Completed', c_pfa_evc, maxFunnelVol, 'bg-orange')}
-                ${drawFunnelRow('Enrolled', c_pfa_enr, maxFunnelVol, 'bg-orange')}
-            `;
-        }
+  // ── NOTE
+  const n = document.getElementById('cap-note');
+  if (selMode==='current') {
+    n.className = 'note';
+    n.textContent = `Current State: All ${fmt(totalApps)} accepted apps consume CE PS capacity. PTO reduces effective capacity by ${fmtD(ptoPS)} PS slots (${fmtD(ptoDays)} days × ${PTO_PS_RATE}). Enrollment gap vs. target: ${enrollVsTarget>=0?'+':''}${fmt(enrollVsTarget)}.`;
+  } else {
+    n.className = 'note fut';
+    n.textContent = `Future State: PFA-diverted patients skip the CE PS queue, freeing ${fmt(slotsFreed)} PS slots. Effective CE PS capacity after PTO is ${fmt(effCap)}. Enrollment gap vs. target: ${enrollVsTarget>=0?'+':''}${fmt(enrollVsTarget)}.`;
+  }
+}
 
-        document.getElementById('demand-funnel-pfa').innerHTML = html_d_pfa;
-        document.getElementById('capacity-funnel-pfa').innerHTML = html_c_pfa;
-    }
+// ── LISTENERS ────────────────────────────────────────────────────────
+['psSchedRate','pfaPct','psComp','siRate','schedRate','evalComp','enrollRate',
+ 'pfaPsComp','pfaSiRate','pfaSchedRate','pfaEvalComp','pfaEnrollRate',
+ 'pfaConvRate','pfaFutEvalComp','pfaFutEnrollRate',
+ 'apps-input','enroll-target','psCap','ptoDays'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', update);
+});
 
-    // Run on load
-    window.onload = init;
+update();
 </script>
 </body>
 </html>

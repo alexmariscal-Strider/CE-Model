@@ -42,24 +42,24 @@
   .hint { font-size:11px; color:#64748b; margin-bottom:8px; line-height:1.5; }
 
   /* KEY METRICS */
-  .results-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+  .results-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 4px; }
   .stat-card { background: #252c3f; border-radius: 8px; padding: 12px; border: 1px solid #2d3548; }
   .stat-card.hl  { border-color: #6366f1; background: #1e1f3a; }
   .stat-card.grn { border-color: #22c55e; background: #0f2a1a; }
   .stat-card.yel { border-color: #f59e0b; background: #271e0a; }
   .stat-card.red { border-color: #ef4444; background: #2a0f0f; }
-  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; margin-bottom: 4px; }
+  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .stat-value { font-size: 22px; font-weight: 700; color: #f1f5f9; }
-  .stat-sub   { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .stat-sub   { font-size: 11px; color: #64748b; margin-top: 2px; line-height: 1.2; }
 
   /* ENROLLMENT TARGET BANNER */
   .target-banner { display:flex; align-items:center; justify-content:space-between; gap:12px; background:#1a1f30; border:1px solid #2d3548; border-radius:8px; padding:12px 16px; margin-bottom:4px; flex-wrap:wrap; }
   .tb-item { display:flex; flex-direction:column; align-items:center; flex: 1; }
   .tb-label { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#64748b; margin-bottom:4px; text-align: center; }
-  .tb-val   { font-size:18px; font-weight:700; color:#f1f5f9; }
+  .tb-val   { font-size:22px; font-weight:700; color:#f1f5f9; }
   .tb-sep   { width:1px; height:36px; background:#2d3548; }
-  .tb-delta-pos { font-size:18px; font-weight:700; color:#22c55e; }
-  .tb-delta-neg { font-size:18px; font-weight:700; color:#ef4444; }
+  .tb-delta-pos { font-size:22px; font-weight:700; color:#22c55e; }
+  .tb-delta-neg { font-size:22px; font-weight:700; color:#ef4444; }
 
   /* DUAL FUNNEL */
   .funnel-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
@@ -199,8 +199,11 @@
     </div>
 
     <div class="panel">
-      <h2>Enrollment vs. Target Summary</h2>
+      <h2>Enrollment Target Assurance</h2>
       <div class="target-banner" id="target-banner"></div>
+      <p style="font-size:11px; color:#64748b; margin-top:10px; text-align:center; line-height: 1.4;">
+        <em><strong>Note to Leadership:</strong> Because enrollment targets are met via a rolling timeline (approx. 10% in-month apps, 60% prior month, 30% 2+ months back), comparing raw In-Month Cohort Yield directly to the Target is misleading. <strong>Capacity Variance</strong> is the true leading indicator of whether the team is staffed to clear the required historical pipeline to hit the goal.</em>
+      </p>
     </div>
 
     <div class="panel">
@@ -354,43 +357,49 @@ function update() {
   const psHead        = effCap - ceGrossDemand; 
   const slotsFreed    = selMode==='future' ? Math.round(pfaApps * psScR) : 0;
 
-  const enrollVsTarget = projEnrolled - enrollTgt;
+  // Assuring Leadership metric:
+  const capacityVariance = totalMaxCapacity - enrollTgt;
+  const enrollDemandGap  = demandEnrolled - projEnrolled; 
 
   // ── METRICS TITLE
   document.getElementById('metrics-title').textContent = `Key Outputs — ${month} · ${selMode==='current' ? 'Current State' : 'Future State'}`;
 
-  // ── KEY METRICS CARDS
+  // ── KEY METRICS CARDS (5 Columns now)
   const uC = psUtil>100 ? 'red' : psUtil>90 ? 'yel' : 'grn';
   const freeCard = selMode==='future'
-    ? `<div class="stat-card grn"><div class="stat-label">CE PS Slots Freed</div><div class="stat-value">${fmt(slotsFreed)}</div><div class="stat-sub">PFA bypasses PS entirely</div></div>`
-    : `<div class="stat-card"><div class="stat-label">Apps via PFA (in PS queue)</div><div class="stat-value">${fmt(pfaApps)}</div><div class="stat-sub">Consumes CE PS capacity</div></div>`;
+    ? `<div class="stat-card grn"><div class="stat-label">CE PS Slots Freed</div><div class="stat-value">${fmt(slotsFreed)}</div><div class="stat-sub">Bypassed PS queue</div></div>`
+    : `<div class="stat-card"><div class="stat-label">Apps via PFA</div><div class="stat-value">${fmt(pfaApps)}</div><div class="stat-sub">In CE PS queue</div></div>`;
 
   document.getElementById('metrics').innerHTML = `
     <div class="stat-card hl">
       <div class="stat-label">CE PS Capacity</div>
       <div class="stat-value">${fmt(effCap)}</div>
-      <div class="stat-sub">CE PS Demand: ${fmt(ceGrossDemand)}${overCap ? ' ⚠️' : ''}</div>
+      <div class="stat-sub">Demand: ${fmt(ceGrossDemand)}${overCap ? ' ⚠️' : ''}</div>
     </div>
     <div class="stat-card ${uC}">
       <div class="stat-label">PS Utilization</div>
       <div class="stat-value">${pct(psUtil)}</div>
       <div class="stat-sub">${psHead>=0 ? '+'+fmt(psHead)+' headroom' : fmt(Math.abs(psHead))+' shortfall'}</div>
     </div>
-    <div class="stat-card ${maxCapStdFunnel.enrolled >= enrollTgt ? 'grn' : 'yel'}">
-      <div class="stat-label">Max Enrollment Capacity</div>
+    <div class="stat-card ${totalMaxCapacity >= enrollTgt ? 'grn' : 'yel'}">
+      <div class="stat-label">Max Enrollment Cap.</div>
       <div class="stat-value">${fmt(totalMaxCapacity)}</div>
-      <div class="stat-sub">Actual Projected Reality: ${fmt(projEnrolled)}</div>
+      <div class="stat-sub">Target: ${fmt(enrollTgt)}</div>
     </div>
-    ${freeCard}`;
+    ${freeCard}
+    <div class="stat-card">
+      <div class="stat-label">Total Evals Needed</div>
+      <div class="stat-value">${fmt(totalEvals)}</div>
+      <div class="stat-sub">Std: ${fmt(projStdFunnel.evalSched)} · PFA: ${fmt(projPfaFunnel.evalSched)}</div>
+    </div>`;
 
   // ── ENROLLMENT VS TARGET BANNER
-  const evtC = enrollVsTarget >= 0 ? 'tb-delta-pos' : 'tb-delta-neg';
+  const cvtC = capacityVariance >= 0 ? 'tb-delta-pos' : 'tb-delta-neg';
   document.getElementById('target-banner').innerHTML = `
-    <div class="tb-item"><div class="tb-label">Target</div><div class="tb-val">${fmt(enrollTgt)}</div></div><div class="tb-sep"></div>
-    <div class="tb-item"><div class="tb-label">Demand Yield</div><div class="tb-val" style="color:#94a3b8;">${fmt(demandEnrolled)}</div></div><div class="tb-sep"></div>
-    <div class="tb-item"><div class="tb-label">Capacity Yield</div><div class="tb-val" style="color:#a5b4fc;">${fmt(totalMaxCapacity)}</div></div><div class="tb-sep"></div>
-    <div class="tb-item"><div class="tb-label">Projected (Actual)</div><div class="tb-val">${fmt(projEnrolled)}</div></div><div class="tb-sep"></div>
-    <div class="tb-item"><div class="tb-label">Variance (Act vs Tgt)</div><div class="${evtC}">${enrollVsTarget>=0?'+':''}${fmt(enrollVsTarget)}</div></div>`;
+    <div class="tb-item"><div class="tb-label">Enrollment Target</div><div class="tb-val">${fmt(enrollTgt)}</div></div><div class="tb-sep"></div>
+    <div class="tb-item" title="What your CEs can process this month"><div class="tb-label">Max Capacity Yield</div><div class="tb-val" style="color:#a5b4fc;">${fmt(totalMaxCapacity)}</div></div><div class="tb-sep"></div>
+    <div class="tb-item" title="Capacity vs Target"><div class="tb-label">Capacity Variance</div><div class="${cvtC}">${capacityVariance>=0?'+':''}${fmt(capacityVariance)}</div></div><div class="tb-sep"></div>
+    <div class="tb-item" title="What this month's app cohort will yield"><div class="tb-label">In-Month Cohort Yield</div><div class="tb-val" style="color:#94a3b8;">${fmt(projEnrolled)}</div></div>`;
 
   // ── FUNNEL BARS
   const maxBar = Math.max(totalApps * 1.05, effCap * 1.05, ceGrossDemand * 1.05);

@@ -75,7 +75,6 @@
   .funnel-title.std-col  { color: #6366f1; }
   .funnel-title.cap-col  { color: #06b6d4; }
   .funnel-title.pfa-col  { color: #f59e0b; }
-  .funnel-title.comb-col { color: #22c55e; }
 
   .funnel-row { display: flex; align-items: center; margin-bottom: 5px; gap: 8px; }
   .funnel-lbl { width: 145px; font-size: 11px; color: #94a3b8; flex-shrink: 0; }
@@ -85,7 +84,6 @@
   .bar-std  { background: linear-gradient(90deg,#4f46e5,#6366f1); }
   .bar-cap  { background: linear-gradient(90deg,#0891b2,#06b6d4); }
   .bar-pfa  { background: linear-gradient(90deg,#d97706,#f59e0b); }
-  .bar-comb { background: linear-gradient(90deg,#16a34a,#22c55e); }
 
   /* TABLES */
   .capacity-table { width:100%; border-collapse:collapse; font-size:12px; }
@@ -101,8 +99,7 @@
   .ws-green { background-color: #22c55e; }
   .ws-red { background-color: #ef4444; }
 
-  .divider { border:none; border-top:1px solid #2d3548; margin:14px 0; }
-  .warn-box { font-size:11px; color:#fca5a5; background:#2a0f0f; border-radius:5px; padding:6px 10px; margin-top:8px; display:none; }
+  .warn-box { font-size:11px; color:#fca5a5; background:#2a0f0f; border-radius:5px; padding:8px 12px; margin-top:14px; display:none; border-left: 3px solid #ef4444; }
   .warn-box.on { display:block; }
   .right-col { display:flex; flex-direction:column; gap:16px; }
 </style>
@@ -251,10 +248,12 @@
         </div>
       </div>
 
-      <div class="funnel-section" style="margin-bottom:14px;">
+      <div class="funnel-section">
         <div class="funnel-title pfa-col" id="pfa-funnel-title">PFA-Converted Path (Actual Realized)</div>
         <div id="f-pfa"></div>
       </div>
+      
+      <div class="warn-box" id="warn-box">⚠️ System demand exceeds effective CE capacity — actual throughput is capped. Constrained outputs are shown above.</div>
     </div>
     
     <div class="panel">
@@ -544,6 +543,8 @@ function update() {
   } else {
     bar('f-pfa', [['PFA Apps Diverted', pfaApps], ['Converted → Eval', projPfaFunnel.evalSched], ['Eval Completed', projPfaFunnel.evalComp], ['Enrolled', projPfaFunnel.enrolled]], 'bar-pfa');
   }
+
+  document.getElementById('warn-box').classList.toggle('on', overCap);
 
   // ── CAPACITY SUMMARY TABLE
   let cRows = selMode==='current' 

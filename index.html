@@ -99,9 +99,10 @@
   .ws-green { background-color: #22c55e; }
   .ws-red { background-color: #ef4444; }
 
-  .warn-box { font-size:11px; color:#fca5a5; background:#2a0f0f; border-radius:5px; padding:8px 12px; margin-top:14px; display:none; border-left: 3px solid #ef4444; }
+  .warn-box { font-size:11px; color:#fca5a5; background:#2a0f0f; border-radius:5px; padding:8px 12px; margin-bottom:14px; display:none; border-left: 3px solid #ef4444; }
   .warn-box.on { display:block; }
-  
+
+  /* NARRATIVE BOX */
   .narrative-box { background: #1e2330; border: 1px solid #3d4a63; border-left: 4px solid #6366f1; padding: 14px; border-radius: 6px; margin-top: 14px; }
   .narrative-box p { font-size: 13px; line-height: 1.6; color: #cbd5e1; }
   .narrative-box strong { color: #f8fafc; }
@@ -242,6 +243,8 @@
       <h2>Funnel Breakdown — Demand vs. Capacity</h2>
       <p style="font-size:11px; color:#64748b; margin-bottom:14px; line-height:1.5;">Left: Unconstrained Demand funnel. Right: Maximum Theoretical Capacity funnel (what your CEs could yield if given unlimited volume). The KPI outputs above merge these to show actual projected results (lesser of demand or capacity).</p>
 
+      <div class="warn-box" id="warn-box">⚠️ System demand exceeds effective CE capacity — actual throughput is capped. Constrained outputs are shown above.</div>
+
       <div class="funnel-grid">
         <div class="funnel-section">
           <div class="funnel-title std-col">📋 Demand — System Total</div>
@@ -257,8 +260,6 @@
         <div class="funnel-title pfa-col" id="pfa-funnel-title">PFA-Converted Path (Actual Realized)</div>
         <div id="f-pfa"></div>
       </div>
-      
-      <div class="warn-box" id="warn-box">⚠️ System demand exceeds effective CE capacity — actual throughput is capped. Constrained outputs are shown above.</div>
       
       <div class="narrative-box" id="dynamic-narrative">
         </div>
@@ -417,10 +418,12 @@ function update() {
     const enrollDemandGap  = demandEnrolled - projEnrolled; 
 
     // --- STAFFING ENGINE MATH ---
+    // CE Headcount (Using Effective Capacity per Head after Shrinkage)
     const effCapPerCE = effCap / CURRENT_CE_HEADCOUNT;
     const requiredCEs = effCapPerCE > 0 ? (ceGrossDemand / effCapPerCE) : 0;
     const ceDeficit = requiredCEs - CURRENT_CE_HEADCOUNT;
 
+    // PFA Headcount
     const pfaCapPerHead = rv('pfaCapPerHead') || 1;
     const requiredPFAs = pfaApps / pfaCapPerHead;
 

@@ -41,23 +41,23 @@
   .badge-future  { display:inline-block; font-size:10px; padding:1px 6px; border-radius:4px; background:#14532d; color:#86efac; font-weight:700; margin-left:5px; vertical-align:middle; }
   .hint { font-size:11px; color:#64748b; margin-bottom:8px; line-height:1.5; }
 
-  /* TOOLTIPS CSS */
-  .has-tooltip { position: relative; cursor: help; display: inline-flex; align-items: center; gap: 4px; }
-  .info-icon { font-style: normal; font-size: 10px; color: #94a3b8; background: #2d3548; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; line-height: 1; }
-  .tooltip { visibility: hidden; width: 220px; background-color: #1e2330; color: #cbd5e1; text-align: left; border-radius: 6px; padding: 10px; position: absolute; z-index: 50; bottom: 130%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.2s; border: 1px solid #3d4a63; box-shadow: 0 4px 12px rgba(0,0,0,0.5); font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: normal; white-space: normal; line-height: 1.5; pointer-events: none; }
-  .tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: #3d4a63 transparent transparent transparent; }
-  .has-tooltip:hover .tooltip { visibility: visible; opacity: 1; }
-
   /* KEY METRICS */
-  .results-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 4px; }
+  .results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 4px; }
   .stat-card { background: #252c3f; border-radius: 8px; padding: 12px; border: 1px solid #2d3548; display: flex; flex-direction: column; justify-content: space-between; }
   .stat-card.hl  { border-color: #6366f1; background: #1e1f3a; }
   .stat-card.grn { border-color: #22c55e; background: #0f2a1a; }
   .stat-card.yel { border-color: #f59e0b; background: #271e0a; }
   .stat-card.red { border-color: #ef4444; background: #2a0f0f; }
-  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; margin-bottom: 4px; white-space: nowrap; overflow: visible; }
+  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .stat-value { font-size: 22px; font-weight: 700; color: #f1f5f9; }
   .stat-sub   { font-size: 11px; color: #64748b; margin-top: 2px; line-height: 1.3; }
+
+  /* UTILIZATION BARS */
+  .util-bar-bg { background: #0f1117; height: 6px; border-radius: 3px; margin: 8px 0; overflow: hidden; border: 1px solid #1a2030; }
+  .util-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
+  .util-green { background: #22c55e; box-shadow: 0 0 5px rgba(34, 197, 94, 0.4); }
+  .util-yel { background: #f59e0b; box-shadow: 0 0 5px rgba(245, 158, 11, 0.4); }
+  .util-red { background: #ef4444; box-shadow: 0 0 5px rgba(239, 68, 68, 0.4); }
 
   /* ENROLLMENT TARGET BANNER */
   .target-banner { display:flex; align-items:center; justify-content:space-between; gap:12px; background:#1a1f30; border:1px solid #2d3548; border-radius:8px; padding:12px 16px; margin-bottom:4px; flex-wrap:wrap; }
@@ -98,6 +98,10 @@
   .capacity-table .g  { color:#22c55e; }
   .capacity-table .w  { color:#f59e0b; }
   .capacity-table .b  { color:#ef4444; }
+  
+  .weekly-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .ws-green { background-color: #22c55e; }
+  .ws-red { background-color: #ef4444; }
 
   .divider { border:none; border-top:1px solid #2d3548; margin:14px 0; }
   .note { font-size:11px; color:#94a3b8; background:#151b28; border-radius:6px; padding:10px 12px; border-left:3px solid #3d4a63; margin-top:12px; line-height:1.6; }
@@ -256,7 +260,7 @@
       </div>
 
       <div class="warn-box" id="warn-box">⚠️ System demand exceeds effective CE capacity — actual throughput is capped. Constrained outputs are shown above.</div>
-      
+
       <div class="narrative-box" id="dynamic-narrative">
         </div>
     </div>
@@ -273,6 +277,9 @@ const PS_CAPS      = [1008, 1124, 1142, 1128, 1124, 1344, 1288, 1228];
 const PTO_DAYS     = [0,    0,    0,    0,    0,    0,    0,    0   ];
 
 const PTO_PS_RATE  = 3.75;
+const EVAL_CAP_RATIO = 43 / 58; 
+const PTO_EVAL_RATE  = 43 / 15; 
+const CURRENT_CE_HEADCOUNT = 15;
 const WEEKS_PER_MONTH = 4.33; // Standard conversion factor
 
 let selMonth = 0;
@@ -334,6 +341,9 @@ function update() {
   
   const ptoPS       = ptoDays * PTO_PS_RATE;
   const effCap      = Math.max(0, psCapBase - ptoPS);   
+  
+  const ptoEval     = ptoDays * PTO_EVAL_RATE;
+  const effEvalCap  = Math.max(0, Math.round((psCapBase * EVAL_CAP_RATIO) - ptoEval));
 
   const pfaP        = rv('pfaPct') / 100;
   const psScR       = rv('psSchedRate') / 100;
@@ -392,62 +402,59 @@ function update() {
   const psUtil        = ceGrossDemand > 0 ? (effPS / effCap) * 100 : 0;
   const psHead        = effCap - ceGrossDemand; 
   
+  const evalUtil      = effEvalCap > 0 ? (totalEvals / effEvalCap) * 100 : 0;
+  const evalHead      = effEvalCap - totalEvals;
+  
   const slotsFreed    = selMode==='future' ? Math.round(pfaApps * psScR) : 0;
+
   const capacityVariance = totalMaxCapacity - enrollTgt;
   const enrollDemandGap  = demandEnrolled - projEnrolled; 
 
-  // --- STAFFING ENGINE MATH (Simplified fallback) ---
-  const avgPSPerCE = psCapBase / 15;
-  const requiredCEs = avgPSPerCE > 0 ? (ceGrossDemand / avgPSPerCE) : 0;
-  const ceDeficit = requiredCEs - 15;
+  // --- STAFFING ENGINE MATH ---
+  // If 15 CEs produce psCapBase, what does 1 CE produce?
+  const avgPSPerCE = psCapBase / CURRENT_CE_HEADCOUNT;
+  // How many CEs are needed to hit the gross demand?
+  const requiredCEs = ceGrossDemand / avgPSPerCE;
+  const ceDeficit = requiredCEs - CURRENT_CE_HEADCOUNT;
 
   // ── METRICS TITLE
   document.getElementById('metrics-title').textContent = `Executive Summary — ${month} · ${selMode==='current' ? 'Current State' : 'Future State'}`;
 
-  // ── KEY METRICS CARDS WITH TOOLTIPS
+  // ── KEY METRICS CARDS (3x2 Grid)
   const psUtilColor = psUtil > 95 ? 'util-red' : psUtil > 85 ? 'util-yel' : 'util-green';
+  const evalUtilColor = evalUtil > 95 ? 'util-red' : evalUtil > 85 ? 'util-yel' : 'util-green';
   
   const freeCard = selMode==='future'
-    ? `<div class="stat-card">
-        <div class="stat-label has-tooltip">CE PS Slots Freed <span class="info-icon">i</span><div class="tooltip">Number of Phone Screen slots saved by routing apps directly to PFAs.</div></div>
-        <div class="stat-value" style="color:#22c55e;">+${fmt(slotsFreed)}</div>
-        <div style="flex:1;"></div>
-        <div class="stat-sub">Bypassed PS queue entirely</div>
-       </div>`
-    : `<div class="stat-card">
-        <div class="stat-label has-tooltip">Apps via PFA <span class="info-icon">i</span><div class="tooltip">Number of apps routed to PFAs that still consume CE Phone Screen slots.</div></div>
-        <div class="stat-value">${fmt(pfaApps)}</div>
-        <div style="flex:1;"></div>
-        <div class="stat-sub">In CE PS queue</div>
-       </div>`;
+    ? `<div class="stat-card"><div class="stat-label">CE PS Slots Freed</div><div class="stat-value" style="color:#22c55e;">+${fmt(slotsFreed)}</div><div style="flex:1;"></div><div class="stat-sub">Bypassed PS queue entirely</div></div>`
+    : `<div class="stat-card ${enrollDemandGap > 5 ? 'yel' : ''}"><div class="stat-label">Enrolls Lost to Cap</div><div class="stat-value ${enrollDemandGap > 5 ? 'red' : ''}">${fmt(enrollDemandGap)}</div><div style="flex:1;"></div><div class="stat-sub">Demand: ${fmt(demandEnrolled)} · Actual: ${fmt(projEnrolled)}</div></div>`;
 
   document.getElementById('metrics').innerHTML = `
     <div class="stat-card hl">
-      <div class="stat-label has-tooltip">CE PS Capacity <span class="info-icon">i</span><div class="tooltip">Base CE Phone Screen capacity minus known PTO reductions.</div></div>
-      <div class="stat-value">${fmt(effCap)}</div>
-      <div style="flex:1;"></div>
-      <div class="stat-sub">Demand: ${fmt(ceGrossDemand)}${overCap ? ' ⚠️' : ''}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label has-tooltip">PS Utilization <span class="info-icon">i</span><div class="tooltip">Gross PS Demand divided by Effective CE PS Capacity. &gt;100% means demand exceeds capacity.</div></div>
-      <div class="stat-value">${pct(psUtil)}</div>
-      <div class="util-bar-bg"><div class="util-bar-fill ${psUtilColor}" style="width:${Math.min(100, psUtil)}%"></div></div>
-      <div class="stat-sub">Cap: ${fmt(effCap)} · ${psHead>=0 ? '+'+fmt(psHead)+' slots' : fmt(Math.abs(psHead))+' shortfall'}</div>
-    </div>
-    <div class="stat-card hl" style="border-color:#06b6d4;">
-      <div class="stat-label has-tooltip">Required CE Headcount <span class="info-icon">i</span><div class="tooltip">Gross PS Demand divided by Average PS Capacity per CE. Ignores target goals.</div></div>
-      <div class="stat-value">${requiredCEs.toFixed(1)}</div>
-      <div style="flex:1;"></div>
-      <div class="stat-sub">Current: 15.0 · ${ceDeficit > 0 ? `<span class="red">+${ceDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`}</div>
-    </div>
-    <div class="stat-card hl">
-      <div class="stat-label has-tooltip">Max Enrollment Cap. <span class="info-icon">i</span><div class="tooltip">Maximum theoretical enrollments if effective capacity is fully utilized through standard conversion rates.</div></div>
+      <div class="stat-label" title="Theoretical Enrollment Ceiling">Max Enrollment Cap.</div>
       <div class="stat-value">${fmt(totalMaxCapacity)}</div>
       <div style="flex:1;"></div>
       <div class="stat-sub">Target: ${fmt(enrollTgt)}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label has-tooltip">Total Evals Needed <span class="info-icon">i</span><div class="tooltip">Projected number of Clinical Evaluations scheduled based on actual constrained throughput.</div></div>
+      <div class="stat-label" title="Primary Bottleneck">PS Utilization</div>
+      <div class="stat-value">${pct(psUtil)}</div>
+      <div class="util-bar-bg"><div class="util-bar-fill ${psUtilColor}" style="width:${Math.min(100, psUtil)}%"></div></div>
+      <div class="stat-sub">Cap: ${fmt(effCap)} · ${psHead>=0 ? '+'+fmt(psHead)+' slots' : fmt(Math.abs(psHead))+' shortfall'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label" title="Downstream Capacity">Eval Utilization</div>
+      <div class="stat-value">${pct(evalUtil)}</div>
+      <div class="util-bar-bg"><div class="util-bar-fill ${evalUtilColor}" style="width:${Math.min(100, evalUtil)}%"></div></div>
+      <div class="stat-sub">Cap: ${fmt(effEvalCap)} · ${evalHead>=0 ? '+'+fmt(evalHead)+' slots' : fmt(Math.abs(evalHead))+' shortfall'}</div>
+    </div>
+    <div class="stat-card hl" style="border-color:#06b6d4;">
+      <div class="stat-label">Required CE Headcount</div>
+      <div class="stat-value">${requiredCEs.toFixed(1)}</div>
+      <div style="flex:1;"></div>
+      <div class="stat-sub">Current: 15.0 · ${ceDeficit > 0 ? `<span class="red">+${ceDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Evals Needed</div>
       <div class="stat-value">${fmt(totalEvals)}</div>
       <div style="flex:1;"></div>
       <div class="stat-sub">Std: ${fmt(projStdFunnel.evalSched)} · PFA: ${fmt(projPfaFunnel.evalSched)}</div>
@@ -457,22 +464,10 @@ function update() {
   // ── ENROLLMENT VS TARGET BANNER
   const cvtC = capacityVariance >= 0 ? 'tb-delta-pos' : 'tb-delta-neg';
   document.getElementById('target-banner').innerHTML = `
-    <div class="tb-item">
-      <div class="tb-label has-tooltip">Enrollment Target <span class="info-icon">i</span><div class="tooltip">The company's monthly enrollment goal.</div></div>
-      <div class="tb-val">${fmt(enrollTgt)}</div>
-    </div><div class="tb-sep"></div>
-    <div class="tb-item">
-      <div class="tb-label has-tooltip">Max Capacity Yield <span class="info-icon">i</span><div class="tooltip">Theoretical max enrollments based strictly on CE capacity and current conversion rates.</div></div>
-      <div class="tb-val" style="color:#a5b4fc;">${fmt(totalMaxCapacity)}</div>
-    </div><div class="tb-sep"></div>
-    <div class="tb-item">
-      <div class="tb-label has-tooltip">Capacity Variance <span class="info-icon">i</span><div class="tooltip">Difference between Max Capacity Yield and Enrollment Target. Negative means understaffed or low conversion rates.</div></div>
-      <div class="${cvtC}">${capacityVariance>=0?'+':''}${fmt(capacityVariance)}</div>
-    </div><div class="tb-sep"></div>
-    <div class="tb-item">
-      <div class="tb-label has-tooltip">In-Month Cohort Yield <span class="info-icon">i</span><div class="tooltip">Actual projected enrollments based on the lesser of demand or capacity for the current month's cohort.</div></div>
-      <div class="tb-val" style="color:#94a3b8;">${fmt(projEnrolled)}</div>
-    </div>`;
+    <div class="tb-item"><div class="tb-label">Enrollment Target</div><div class="tb-val">${fmt(enrollTgt)}</div></div><div class="tb-sep"></div>
+    <div class="tb-item" title="What your CEs can process this month"><div class="tb-label">Max Capacity Yield</div><div class="tb-val" style="color:#a5b4fc;">${fmt(totalMaxCapacity)}</div></div><div class="tb-sep"></div>
+    <div class="tb-item" title="Capacity vs Target"><div class="tb-label">Capacity Variance</div><div class="${cvtC}">${capacityVariance>=0?'+':''}${fmt(capacityVariance)}</div></div><div class="tb-sep"></div>
+    <div class="tb-item" title="What this month's app cohort will yield"><div class="tb-label">In-Month Cohort Yield</div><div class="tb-val" style="color:#94a3b8;">${fmt(projEnrolled)}</div></div>`;
 
   // ── WEEKLY TABLE
   const wTgtPS   = 150;
@@ -531,11 +526,6 @@ function update() {
     ['Eval Scheduled', maxCapStdFunnel.evalSched], ['Eval Completed', maxCapStdFunnel.evalComp], ['Enrolled', maxCapStdFunnel.enrolled]
   ], 'bar-cap');
 
-  // Dynamic Funnel Title updates based on mode
-  document.getElementById('pfa-funnel-title').textContent = selMode==='future'
-    ? 'PFA-Converted Path (Bypasses CE PS → Enters CE Eval)'
-    : 'PFA-Converted Path (Enters CE PS Queue)';
-
   if (selMode==='current') {
     bar('f-pfa', [['PS Scheduled (PFA)', projPfaFunnel.ps], ['PS Completed', projPfaFunnel.psCompleted], ['Screened In', projPfaFunnel.screenedIn], ['Eval Scheduled', projPfaFunnel.evalSched], ['Eval Completed', projPfaFunnel.evalComp], ['Enrolled', projPfaFunnel.enrolled]], 'bar-pfa');
   } else {
@@ -546,6 +536,7 @@ function update() {
 
   // ── EXECUTIVE NARRATIVE LOGIC ──
   let ceText = "";
+  // Added a tiny 0.1 buffer so it doesn't trigger a warning for "we need 0.0 more CEs" due to floating point math
   if (ceDeficit > 0.1) {
     ceText = `We need roughly <strong>${ceDeficit.toFixed(1)} more CEs</strong> to handle all the applications marketing is projecting to send us in ${month}.`;
   } else if (ceDeficit < -0.1) {
@@ -568,15 +559,12 @@ function update() {
 
 }
 
-// Ensure the code auto-runs when the page opens
-window.onload = function() {
-  setMonth(0); // Load May by default and trigger update
-};
-
 ['psSchedRate','pfaPct','psComp','siRate','schedRate','evalComp','enrollRate','pfaPsComp','pfaSiRate','pfaSchedRate','pfaEvalComp','pfaEnrollRate','pfaConvRate','pfaFutEvalComp','pfaFutEnrollRate','appGrowth','enroll-target','psCap','ptoDays'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', update);
 });
+
+update();
 </script>
 </body>
 </html>

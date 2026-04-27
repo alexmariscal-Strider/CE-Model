@@ -14,6 +14,8 @@
   .month-btn { padding: 5px 11px; border-radius: 6px; border: 1px solid #2d3548; background: #1e2330; color: #94a3b8; font-size: 12px; cursor: pointer; transition: all 0.15s; }
   .month-btn:hover { border-color: #6366f1; color: #c7d2fe; }
   .month-btn.active { background: #312e81; border-color: #6366f1; color: #e0e7ff; font-weight: 600; }
+  .action-btn { background: #3b82f6; border-color: #2563eb; color: #ffffff; font-weight: 600; }
+  .action-btn:hover { background: #2563eb; border-color: #1d4ed8; color: #ffffff; }
 
   .mode-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
   .mode-label { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
@@ -33,12 +35,19 @@
   .input-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
   .input-row label { color: #cbd5e1; font-size: 12px; flex: 1; line-height: 1.35; }
   .input-row input[type=range]  { width: 84px; accent-color: #6366f1; flex-shrink: 0; }
-  .input-row input[type=number] { width: 72px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 5px; color: #f1f5f9; padding: 3px 6px; font-size: 12px; text-align: right; flex-shrink: 0; }
+  .input-row input[type=number] { width: 68px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 5px; color: #f1f5f9; padding: 3px 6px; font-size: 12px; text-align: right; flex-shrink: 0; }
   .val-badge { min-width: 40px; text-align: right; font-size: 12px; font-weight: 600; color: #a5b4fc; flex-shrink: 0; }
   .ro-val    { min-width: 60px; text-align: right; font-size: 12px; font-weight: 600; color: #f1f5f9; background: #0f1117; border: 1px solid #2d3548; border-radius: 5px; padding: 3px 7px; flex-shrink: 0; }
 
   .badge-current { display:inline-block; font-size:10px; padding:1px 6px; border-radius:4px; background:#1e3a5f; color:#93c5fd; font-weight:700; margin-left:5px; vertical-align:middle; }
   .badge-future  { display:inline-block; font-size:10px; padding:1px 6px; border-radius:4px; background:#14532d; color:#86efac; font-weight:700; margin-left:5px; vertical-align:middle; }
+  
+  /* TOOLTIPS CSS */
+  .has-tooltip { position: relative; cursor: help; display: inline-flex; align-items: center; gap: 4px; }
+  .info-icon { font-style: normal; font-size: 10px; color: #94a3b8; background: #2d3548; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; line-height: 1; }
+  .tooltip { visibility: hidden; width: 220px; background-color: #1e2330; color: #cbd5e1; text-align: left; border-radius: 6px; padding: 10px; position: absolute; z-index: 50; bottom: 130%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.2s; border: 1px solid #3d4a63; box-shadow: 0 4px 12px rgba(0,0,0,0.5); font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: normal; white-space: normal; line-height: 1.5; pointer-events: none; }
+  .tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: #3d4a63 transparent transparent transparent; }
+  .has-tooltip:hover .tooltip { visibility: visible; opacity: 1; }
 
   /* KEY METRICS */
   .results-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 4px; }
@@ -106,6 +115,20 @@
   .narrative-box h3 { font-size: 11px; text-transform: uppercase; color: #a5b4fc; margin-bottom: 6px; letter-spacing: 0.05em; }
   .narrative-box p { font-size: 13px; line-height: 1.6; color: #cbd5e1; }
   .narrative-box strong { color: #f8fafc; }
+
+  /* MODAL CSS */
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 17, 23, 0.85); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: #1e2330; border: 1px solid #3d4a63; border-radius: 10px; width: 450px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #2d3548; padding-bottom: 12px; }
+  .modal-header h2 { font-size: 14px; font-weight: 700; color: #f8fafc; margin: 0; }
+  .modal-close { background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; line-height: 1; }
+  .modal-close:hover { color: #ef4444; }
+  .modal-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  .modal-table th { text-align: left; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 8px; border-bottom: 1px solid #2d3548; }
+  .modal-table td { padding: 6px 8px; border-bottom: 1px solid #1a2030; color: #cbd5e1; font-size: 12px; }
+  .modal-table input { width: 60px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 4px; color: #f1f5f9; padding: 4px; font-size: 12px; text-align: right; }
+  .modal-footer { display: flex; justify-content: flex-end; }
   
   .right-col { display:flex; flex-direction:column; gap:16px; }
 </style>
@@ -174,10 +197,6 @@
       <label>Lead CEs <br><span style="color:#64748b;font-size:10px;">4.5 hrs patient-facing/day</span></label>
       <input type="number" id="leadCEs" value="2" min="0" max="50" step="1">
     </div>
-    <div class="input-row">
-      <label>Working Days (this month)</label>
-      <input type="number" id="workingDays" value="20" min="10" max="31" step="0.1">
-    </div>
     
     <div class="section-label">Efficiency & Handle Time (AHT)</div>
     <div class="input-row">
@@ -191,12 +210,21 @@
       <span class="val-badge" id="evalAht-v">60m</span>
     </div>
 
-    <div class="section-label">Capacity Reductions & PFA</div>
+    <div class="section-label">Calendar & Schedule Exceptions</div>
     <div class="input-row">
-      <label>Known PTO Days (this month)</label>
-      <input type="number" id="ptoDays" value="0" min="0" max="200" step="0.5">
+      <label>Working Days (this month)</label>
+      <input type="number" id="workingDays" value="20" min="10" max="31" step="0.1" onchange="syncToArrays()">
     </div>
     <div class="input-row">
+      <label>Known PTO Days (this month)</label>
+      <input type="number" id="ptoDays" value="0" min="0" max="200" step="0.5" onchange="syncToArrays()">
+    </div>
+    
+    <button class="month-btn action-btn" style="width: 100%; display: flex; justify-content: center; margin-top: 10px;" onclick="openPtoModal()">
+      📅 Manage Annual Calendar & PTO
+    </button>
+
+    <div class="input-row" style="margin-top: 16px;">
       <label>Unplanned Shrinkage Buffer (%)<br><span style="color:#64748b;font-size:10px;">Future PTO, sick time, admin</span></label>
       <input type="range" id="shrinkage" min="0" max="25" value="5" step="1">
       <span class="val-badge" id="shrinkage-v">5%</span>
@@ -295,24 +323,47 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="ptoModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>📅 Annual Calendar & PTO Manager</h2>
+      <button class="modal-close" onclick="closePtoModal()">&times;</button>
+    </div>
+    <p style="font-size:11px; color:#94a3b8; margin-bottom:16px;">Update working days and requested PTO across the entire year. These values automatically update the capacity formulas.</p>
+    <table class="modal-table">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Working Days</th>
+          <th>Known PTO Days</th>
+        </tr>
+      </thead>
+      <tbody id="modal-table-body">
+        </tbody>
+    </table>
+    <div class="modal-footer">
+      <button class="month-btn action-btn" onclick="savePtoModal()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── MONTHLY DATA & CALENDAR ──────────────────────────────────────────
 const MONTHS         = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PROJ_APPS_BASE = [1092, 1036, 1039, 1108, 1340, 1425, 1367, 1322]; 
 const ENROLL_TGTS    = [327,  348,  349,  370,  403,  466,  528,  529];
-const PTO_DAYS       = [0,    0,    0,    0,    0,    0,    0,    0   ];
 
-// Exactly matching your specific monthly working calendar
-const WORKING_DAYS   = [20, 21, 21, 21, 21, 21, 18, 22];
-const WEEKS_PER_MONTH = 4.33; 
+// Changed to 'let' so they can be modified by the modal and sidebar
+let WORKING_DAYS     = [20, 21, 21, 21, 21, 21, 18, 22];
+let PTO_DAYS         = [0,  0,  0,  0,  0,  0,  0,  0 ];
 
 // ── TIME-BOXED WFM ALLOCATIONS ───────────────────────────────────────
-// Instead of a fluid pool, we lock minutes to specific tasks to respect your strict quotas.
-const STD_CE_PS_MINS_PER_DAY = 120;   // 4 slots @ 30m
-const STD_CE_EVAL_MINS_PER_DAY = 180; // 3 slots @ 60m
+const STD_CE_PS_MINS_PER_DAY = 120;   // 4 slots @ 30m base
+const STD_CE_EVAL_MINS_PER_DAY = 180; // 3 slots @ 60m base
+const LEAD_CE_PS_MINS_PER_DAY = 90;   // 3 slots @ 30m base
+const LEAD_CE_EVAL_MINS_PER_DAY = 180;// 3 slots @ 60m base
 
-const LEAD_CE_PS_MINS_PER_DAY = 90;   // 3 slots @ 30m
-const LEAD_CE_EVAL_MINS_PER_DAY = 180;// 3 slots @ 60m
+const WEEKS_PER_MONTH = 4.33; 
 
 let selMonth = 0;
 let selMode  = 'current';
@@ -334,6 +385,46 @@ const setHtml = (id, html) => {
   const el = document.getElementById(id);
   if (el) el.innerHTML = html;
 };
+
+// ── MODAL LOGIC ──
+function openPtoModal() {
+  const tbody = document.getElementById('modal-table-body');
+  let html = '';
+  for (let i = 0; i < MONTHS.length; i++) {
+    html += `
+      <tr>
+        <td><strong>${MONTHS[i]}</strong></td>
+        <td><input type="number" id="mod-wd-${i}" value="${WORKING_DAYS[i]}" step="0.5" min="0"></td>
+        <td><input type="number" id="mod-pto-${i}" value="${PTO_DAYS[i]}" step="0.5" min="0"></td>
+      </tr>
+    `;
+  }
+  tbody.innerHTML = html;
+  document.getElementById('ptoModal').classList.add('open');
+}
+
+function closePtoModal() {
+  document.getElementById('ptoModal').classList.remove('open');
+}
+
+function savePtoModal() {
+  for (let i = 0; i < MONTHS.length; i++) {
+    WORKING_DAYS[i] = parseFloat(document.getElementById(`mod-wd-${i}`).value) || 0;
+    PTO_DAYS[i] = parseFloat(document.getElementById(`mod-pto-${i}`).value) || 0;
+  }
+  // Resync sidebar
+  document.getElementById('workingDays').value = WORKING_DAYS[selMonth];
+  document.getElementById('ptoDays').value = PTO_DAYS[selMonth];
+  closePtoModal();
+  update();
+}
+
+function syncToArrays() {
+  // If the user manually types a number in the sidebar, update the master arrays immediately
+  WORKING_DAYS[selMonth] = rv('workingDays');
+  PTO_DAYS[selMonth] = rv('ptoDays');
+  update();
+}
 
 function setMonth(idx) {
   selMonth = idx;
@@ -464,6 +555,7 @@ function update() {
     const overCap = ceGrossDemand > effCap;
     let projStdPS = overCap ? grossStdPS * (effCap / ceGrossDemand) : grossStdPS;
     let projPfaPS = overCap ? grossPfaPS * (effCap / ceGrossDemand) : grossPfaPS;
+    
     const effPS = projStdPS + projPfaPS;
 
     const projStdFunnel = stdFunnel(projStdPS, rv('psComp')/100, rv('siRate')/100, rv('schedRate')/100, rv('evalComp')/100, rv('enrollRate')/100);
@@ -510,7 +602,7 @@ function update() {
 
     setHtml('metrics', `
       <div class="stat-card">
-        <div class="stat-label">PS Utilization <span title="(System Gross PS Demand) ÷ (Effective CE PS Capacity). Anything over 100% means the queue is backing up." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="stat-label">PS Utilization <span title="(System Gross PS Demand) ÷ (Effective CE PS Capacity). Anything over 100% means the queue is backing up and patients are delayed." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
         <div class="stat-value">${pct(psUtil)}</div>
         <div class="util-bar-bg"><div class="util-bar-fill ${psUtilColor}" style="width:${Math.min(100, psUtil)}%"></div></div>
         <div class="stat-sub">Cap: ${fmt(effCap)} · ${psHead>=0 ? '+'+fmt(psHead)+' slots' : fmt(Math.abs(psHead))+' shortfall'}</div>
@@ -546,13 +638,13 @@ function update() {
         <div style="flex:1;"></div>
         <div class="stat-sub">Proj. Completed: ${fmt(projEvalComp)}</div>
       </div>
-      ${freeCard}
       <div class="stat-card">
-        <div class="stat-label">Total Apps via PFA <span title="The number of PFA-diverted apps that currently consume CE Phone Screen capacity." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
-        <div class="stat-value">${fmt(pfaApps)}</div>
+        <div class="stat-label">Total Evals Scheduled <span title="The actual projected number of Clinical Evaluations that will be scheduled based on constrained throughput." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="stat-value">${fmt(totalEvals)}</div>
         <div style="flex:1;"></div>
-        <div class="stat-sub">Based on ${fmt(rv('pfaPct'))}% diversion rate</div>
+        <div class="stat-sub">Std: ${fmt(projStdFunnel.evalSched)} · PFA: ${fmt(projPfaFunnel.evalSched)}</div>
       </div>
+      ${freeCard}
     `);
 
     // ── ENROLLMENT VS TARGET BANNER WITH TOOLTIPS ──

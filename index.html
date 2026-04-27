@@ -47,7 +47,7 @@
   .stat-card.grn { border-color: #22c55e; background: #0f2a1a; }
   .stat-card.yel { border-color: #f59e0b; background: #271e0a; }
   .stat-card.red { border-color: #ef4444; background: #2a0f0f; }
-  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: #64748b; margin-bottom: 4px; white-space: nowrap; overflow: visible; }
   .stat-value { font-size: 22px; font-weight: 700; color: #f1f5f9; }
   .stat-sub   { font-size: 11px; color: #64748b; margin-top: 2px; line-height: 1.3; }
 
@@ -167,23 +167,23 @@
 
     <div class="section-label">Staffing Engine (Team Comp)</div>
     <div class="input-row">
-      <label>Standard CEs <br><span style="color:#64748b;font-size:10px;">6 hrs patient-facing/day</span></label>
+      <label>Standard CEs <br><span style="color:#64748b;font-size:10px;">5 hrs patient-facing/day</span></label>
       <input type="number" id="stdCEs" value="13" min="0" max="100" step="1">
     </div>
     <div class="input-row">
-      <label>Lead CEs <br><span style="color:#64748b;font-size:10px;">4.25 hrs patient-facing/day</span></label>
+      <label>Lead CEs <br><span style="color:#64748b;font-size:10px;">4.5 hrs patient-facing/day</span></label>
       <input type="number" id="leadCEs" value="2" min="0" max="50" step="1">
     </div>
     <div class="input-row">
       <label>Working Days (this month)</label>
-      <input type="number" id="workingDays" value="17.4" min="10" max="31" step="0.1">
+      <input type="number" id="workingDays" value="20" min="10" max="31" step="0.1">
     </div>
     
-    <div class="section-label">Efficiency & AHT</div>
+    <div class="section-label">Efficiency & Handle Time (AHT)</div>
     <div class="input-row">
       <label>PS Handle Time (mins)</label>
-      <input type="range" id="psAht" min="15" max="60" value="45" step="5">
-      <span class="val-badge" id="psAht-v">45m</span>
+      <input type="range" id="psAht" min="15" max="60" value="30" step="5">
+      <span class="val-badge" id="psAht-v">30m</span>
     </div>
     <div class="input-row">
       <label>Eval Handle Time (mins)</label>
@@ -296,16 +296,23 @@
 </div>
 
 <script>
-// ── MONTHLY DATA ─────────────────────────────────────────────────────
-const MONTHS       = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// ── MONTHLY DATA & CALENDAR ──────────────────────────────────────────
+const MONTHS         = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PROJ_APPS_BASE = [1092, 1036, 1039, 1108, 1340, 1425, 1367, 1322]; 
-const ENROLL_TGTS  = [327,  348,  349,  370,  403,  466,  528,  529];
-const PTO_DAYS     = [0,    0,    0,    0,    0,    0,    0,    0   ];
+const ENROLL_TGTS    = [327,  348,  349,  370,  403,  466,  528,  529];
+const PTO_DAYS       = [0,    0,    0,    0,    0,    0,    0,    0   ];
 
-// Working days array specifically mapped so the dynamic math perfectly matches your legacy baseline logic
-const WORKING_DAYS = [17.38, 19.38, 19.69, 19.45, 19.38, 23.17, 22.21, 21.17];
-const EVAL_CAP_RATIO = 43 / 58; 
+// Exactly matching your specific monthly working calendar
+const WORKING_DAYS   = [20, 21, 21, 21, 21, 21, 18, 22];
 const WEEKS_PER_MONTH = 4.33; 
+
+// ── TIME-BOXED WFM ALLOCATIONS ───────────────────────────────────────
+// Instead of a fluid pool, we lock minutes to specific tasks to respect your strict quotas.
+const STD_CE_PS_MINS_PER_DAY = 120;   // 4 slots @ 30m
+const STD_CE_EVAL_MINS_PER_DAY = 180; // 3 slots @ 60m
+
+const LEAD_CE_PS_MINS_PER_DAY = 90;   // 3 slots @ 30m
+const LEAD_CE_EVAL_MINS_PER_DAY = 180;// 3 slots @ 60m
 
 let selMonth = 0;
 let selMode  = 'current';
@@ -332,7 +339,7 @@ function setMonth(idx) {
   selMonth = idx;
   document.querySelectorAll('.month-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
   document.getElementById('enroll-target').value = ENROLL_TGTS[idx];
-  document.getElementById('workingDays').value   = WORKING_DAYS[idx].toFixed(1);
+  document.getElementById('workingDays').value   = WORKING_DAYS[idx];
   document.getElementById('ptoDays').value       = PTO_DAYS[idx];
   update();
 }
@@ -368,52 +375,52 @@ function update() {
     const baseApps    = PROJ_APPS_BASE[selMonth];
     const appGrowth   = rv('appGrowth');
     
+    // Calculate adjusted total apps
     const totalApps   = Math.round(baseApps * (1 + (appGrowth / 100)));
     setText('apps-base-ro', fmt(baseApps));
     setText('apps-adj-ro', fmt(totalApps));
     
     const enrollTgt   = parseInt(document.getElementById('enroll-target').value) || ENROLL_TGTS[selMonth];
-    const ptoDays     = rv('ptoDays');
     
-    // --- WFM STAFFING & AHT ENGINE ---
+    // ── TIME-BOXED CAPACITY ENGINE ──
     const stdCEs         = rv('stdCEs');
     const leadCEs        = rv('leadCEs');
-    const totalHeadcount = stdCEs + leadCEs || 15; // fallback
+    const totalHeadcount = stdCEs + leadCEs || 1;
     const workingDays    = rv('workingDays');
-    const psAht          = rv('psAht');
-    const evalAht        = rv('evalAht');
+    const psAht          = rv('psAht') || 30;
+    const evalAht        = rv('evalAht') || 60;
+    const ptoDays        = rv('ptoDays');
+    const shrinkagePct   = rv('shrinkage') / 100;
 
-    // Total daily patient-facing minutes across the whole team
-    const totalDailyMins = (stdCEs * 360) + (leadCEs * 255);
-    
-    // Minutes required to process 1 equivalent "System Unit" (1 PS + downstream Evals)
-    const minsPerCycle   = psAht + (EVAL_CAP_RATIO * evalAht);
-    
-    // Daily System Capacity
-    const dailyPSCap   = totalDailyMins / minsPerCycle;
-    const dailyEvalCap = dailyPSCap * EVAL_CAP_RATIO;
+    // 1. Determine maximum daily quota per person based on AHT and Boxed Minutes
+    const stdPsDaily   = STD_CE_PS_MINS_PER_DAY / psAht;      // defaults to 4
+    const stdEvalDaily = STD_CE_EVAL_MINS_PER_DAY / evalAht;  // defaults to 3
+    const leadPsDaily  = LEAD_CE_PS_MINS_PER_DAY / psAht;     // defaults to 3
+    const leadEvalDaily= LEAD_CE_EVAL_MINS_PER_DAY / evalAht; // defaults to 3
 
-    // Monthly Theoretical Base Capacity
+    // 2. Aggregate Team Daily Capacity
+    const dailyPSCap   = (stdCEs * stdPsDaily) + (leadCEs * leadPsDaily);
+    const dailyEvalCap = (stdCEs * stdEvalDaily) + (leadCEs * leadEvalDaily);
+
+    // 3. Aggregate Base Monthly Capacity
     const psCapBase    = dailyPSCap * workingDays;
     const evalCapBase  = dailyEvalCap * workingDays;
-    
-    // PTO Reduction (Avg daily output per person * PTO days)
+
+    // 4. Calculate Capacity Lost (PTO + Shrinkage)
     const ptoPSLoss    = ptoDays * (dailyPSCap / totalHeadcount);
     const ptoEvalLoss  = ptoDays * (dailyEvalCap / totalHeadcount);
-
-    // Shrinkage math
-    const shrinkagePct = rv('shrinkage') / 100;
+    
     const shrinkagePS  = psCapBase * shrinkagePct;
     const shrinkageEval= evalCapBase * shrinkagePct;
 
-    // Effective Net Capacity
+    // 5. Net Effective Capacity
     const effCap       = Math.max(0, Math.round(psCapBase - ptoPSLoss - shrinkagePS));   
     const effEvalCap   = Math.max(0, Math.round(evalCapBase - ptoEvalLoss - shrinkageEval));
 
     const pfaP        = rv('pfaPct') / 100;
     const psScR       = rv('psSchedRate') / 100;
 
-    // Sync input badges
+    // Sync input badges dynamically
     ['psSchedRate','pfaPct','psComp','siRate','schedRate','evalComp','enrollRate',
      'pfaPsComp','pfaSiRate','pfaSchedRate','pfaEvalComp','pfaEnrollRate',
      'pfaConvRate','pfaFutEvalComp','pfaFutEnrollRate','appGrowth','shrinkage', 'psAht', 'evalAht'].forEach(id => {
@@ -429,14 +436,14 @@ function update() {
     const stdApps = Math.round(totalApps * (1 - pfaP));
     const pfaApps = Math.round(totalApps * pfaP);
 
+    // Demand Math
     const systemGrossPS = totalApps * psScR; 
     setText('gross-ps-ro', fmt(systemGrossPS));
 
     const grossStdPS = stdApps * psScR;
-    const grossPfaPS = selMode==='current' ? pfaApps * psScR : 0;
+    const grossPfaPS = selMode === 'current' ? pfaApps * psScR : 0;
     const ceGrossDemand = grossStdPS + grossPfaPS;
 
-    setText('pto-ps-ro', fmtD(ptoPSLoss) + ' PS');
     setText('eff-cap-ro', fmt(effCap));
 
     // 1. UNCONSTRAINED DEMAND
@@ -453,11 +460,10 @@ function update() {
     const maxCapStdFunnel = stdFunnel(effCap, rv('psComp')/100, rv('siRate')/100, rv('schedRate')/100, rv('evalComp')/100, rv('enrollRate')/100);
     const totalMaxCapacity = maxCapStdFunnel.enrolled + (selMode === 'future' ? demandPfa.enrolled : 0);
 
-    // 3. ACTUAL PROJECTED
+    // 3. ACTUAL PROJECTED (Constrained by Capacity)
     const overCap = ceGrossDemand > effCap;
     let projStdPS = overCap ? grossStdPS * (effCap / ceGrossDemand) : grossStdPS;
     let projPfaPS = overCap ? grossPfaPS * (effCap / ceGrossDemand) : grossPfaPS;
-    
     const effPS = projStdPS + projPfaPS;
 
     const projStdFunnel = stdFunnel(projStdPS, rv('psComp')/100, rv('siRate')/100, rv('schedRate')/100, rv('evalComp')/100, rv('enrollRate')/100);
@@ -481,7 +487,7 @@ function update() {
     const enrollDemandGap  = demandEnrolled - projEnrolled; 
 
     // --- REQUIRED HEADCOUNT & TARGET REVERSE ENGINEERING ---
-    const effCapPerCE = totalHeadcount > 0 ? (effCap / totalHeadcount) : 0;
+    const effCapPerCE = effCap / totalHeadcount;
     const requiredCEs = effCapPerCE > 0 ? (ceGrossDemand / effCapPerCE) : 0;
     const ceDeficit = requiredCEs - totalHeadcount;
 
@@ -499,22 +505,12 @@ function update() {
     const evalUtilColor = evalUtil > 95 ? 'util-red' : evalUtil > 85 ? 'util-yel' : 'util-green';
     
     const freeCard = selMode==='future'
-      ? `<div class="stat-card">
-           <div class="stat-label">CE PS Slots Freed <span title="Number of Phone Screen slots saved by routing apps directly to PFAs." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
-           <div class="stat-value" style="color:#22c55e;">+${fmt(slotsFreed)}</div>
-           <div style="flex:1;"></div>
-           <div class="stat-sub">Bypassed PS queue entirely</div>
-         </div>`
-      : `<div class="stat-card ${enrollDemandGap > 5 ? 'yel' : ''}">
-           <div class="stat-label">Enrolls Lost to Cap <span title="The difference between unconstrained demand yield and actual projected yield." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
-           <div class="stat-value ${enrollDemandGap > 5 ? 'red' : ''}">${fmt(enrollDemandGap)}</div>
-           <div style="flex:1;"></div>
-           <div class="stat-sub">Demand: ${fmt(demandEnrolled)} · Actual: ${fmt(projEnrolled)}</div>
-         </div>`;
+      ? `<div class="stat-card"><div class="stat-label">CE PS Slots Freed <span title="Number of Phone Screen slots saved by routing apps directly to PFAs." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div><div class="stat-value" style="color:#22c55e;">+${fmt(slotsFreed)}</div><div style="flex:1;"></div><div class="stat-sub">Bypassed PS queue entirely</div></div>`
+      : `<div class="stat-card ${enrollDemandGap > 5 ? 'yel' : ''}"><div class="stat-label">Enrolls Lost to Cap <span title="The difference between unconstrained demand yield and actual projected yield." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div><div class="stat-value ${enrollDemandGap > 5 ? 'red' : ''}">${fmt(enrollDemandGap)}</div><div style="flex:1;"></div><div class="stat-sub">Demand: ${fmt(demandEnrolled)} · Actual: ${fmt(projEnrolled)}</div></div>`;
 
     setHtml('metrics', `
       <div class="stat-card">
-        <div class="stat-label">PS Utilization <span title="(System Gross PS Demand) ÷ (Effective CE PS Capacity). Anything over 100% means the queue is backing up and patients are delayed." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="stat-label">PS Utilization <span title="(System Gross PS Demand) ÷ (Effective CE PS Capacity). Anything over 100% means the queue is backing up." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
         <div class="stat-value">${pct(psUtil)}</div>
         <div class="util-bar-bg"><div class="util-bar-fill ${psUtilColor}" style="width:${Math.min(100, psUtil)}%"></div></div>
         <div class="stat-sub">Cap: ${fmt(effCap)} · ${psHead>=0 ? '+'+fmt(psHead)+' slots' : fmt(Math.abs(psHead))+' shortfall'}</div>

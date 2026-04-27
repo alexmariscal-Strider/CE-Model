@@ -41,6 +41,13 @@
   .badge-future  { display:inline-block; font-size:10px; padding:1px 6px; border-radius:4px; background:#14532d; color:#86efac; font-weight:700; margin-left:5px; vertical-align:middle; }
   .hint { font-size:11px; color:#64748b; margin-bottom:8px; line-height:1.5; }
 
+  /* TOOLTIPS CSS */
+  .has-tooltip { position: relative; cursor: help; display: inline-flex; align-items: center; gap: 4px; }
+  .info-icon { font-style: normal; font-size: 10px; color: #94a3b8; background: #2d3548; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; line-height: 1; }
+  .tooltip { visibility: hidden; width: 220px; background-color: #1e2330; color: #cbd5e1; text-align: left; border-radius: 6px; padding: 10px; position: absolute; z-index: 50; bottom: 130%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.2s; border: 1px solid #3d4a63; box-shadow: 0 4px 12px rgba(0,0,0,0.5); font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: normal; white-space: normal; line-height: 1.5; pointer-events: none; }
+  .tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: #3d4a63 transparent transparent transparent; }
+  .has-tooltip:hover .tooltip { visibility: visible; opacity: 1; }
+
   /* KEY METRICS */
   .results-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 4px; }
   .stat-card { background: #252c3f; border-radius: 8px; padding: 12px; border: 1px solid #2d3548; display: flex; flex-direction: column; justify-content: space-between; }
@@ -255,7 +262,7 @@
         </div>
       </div>
 
-      <div class="funnel-section" style="margin-bottom:14px;">
+      <div class="funnel-section">
         <div class="funnel-title pfa-col" id="pfa-funnel-title">PFA-Converted Path (Actual Realized)</div>
         <div id="f-pfa"></div>
       </div>
@@ -294,20 +301,9 @@ let selMode  = 'current';
 const fmt = n => Math.round(n).toLocaleString();
 const fmtD = n => n.toFixed(1);
 const pct  = n => n.toFixed(1) + '%';
-
-// CRASH-PROOF HELPER FUNCTIONS
-const rv = id => {
-  const el = document.getElementById(id);
-  return el ? parseFloat(el.value) : 0;
-};
-const setText = (id, text) => {
-  const el = document.getElementById(id);
-  if (el) el.textContent = text;
-};
-const setHtml = (id, html) => {
-  const el = document.getElementById(id);
-  if (el) el.innerHTML = html;
-};
+const rv   = id => parseFloat(document.getElementById(id).value);
+const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+const setHtml = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
 
 function setMonth(idx) {
   selMonth = idx;
@@ -418,6 +414,7 @@ function update() {
       : pfaFutureFunnel(pfaApps, rv('pfaConvRate')/100, rv('pfaFutEvalComp')/100, rv('pfaFutEnrollRate')/100);
 
     const projEnrolled  = projStdFunnel.enrolled + projPfaFunnel.enrolled;
+    const projEvalComp  = projStdFunnel.evalComp + projPfaFunnel.evalComp;
     const totalEvals    = projStdFunnel.evalSched + projPfaFunnel.evalSched;
     
     // Utilization Math
@@ -439,6 +436,11 @@ function update() {
     const pfaCapPerHead = rv('pfaCapPerHead') || 1;
     const requiredPFAs = pfaApps / pfaCapPerHead;
 
+    // TARGET REVERSE-ENGINEERING MATH (Target Evals Required)
+    // To hit target, how many *completed evals* do we need? Use blended actual conversion rate.
+    const blendedEnrollRate = projEvalComp > 0 ? (projEnrolled / projEvalComp) : (rv('enrollRate') / 100);
+    const targetEvalsComp = enrollTgt / blendedEnrollRate;
+
     // ── METRICS TITLE
     setText('metrics-title', `Executive Staffing & Utilization — ${month} · ${selMode==='current' ? 'Current State' : 'Future State'}`);
 
@@ -447,60 +449,50 @@ function update() {
     const evalUtilColor = evalUtil > 95 ? 'util-red' : evalUtil > 85 ? 'util-yel' : 'util-green';
     
     const freeCard = selMode==='future'
-      ? `<div class="stat-card">
-           <div class="stat-label">CE PS Slots Freed <span title="Number of Phone Screen slots saved by routing apps directly to PFAs." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
-           <div class="stat-value" style="color:#22c55e;">+${fmt(slotsFreed)}</div>
-           <div style="flex:1;"></div>
-           <div class="stat-sub">Bypassed PS queue entirely</div>
-         </div>`
-      : `<div class="stat-card ${enrollDemandGap > 5 ? 'yel' : ''}">
-           <div class="stat-label">Enrolls Lost to Cap <span title="The difference between unconstrained demand yield and actual projected yield." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
-           <div class="stat-value ${enrollDemandGap > 5 ? 'red' : ''}">${fmt(enrollDemandGap)}</div>
-           <div style="flex:1;"></div>
-           <div class="stat-sub">Demand: ${fmt(demandEnrolled)} · Actual: ${fmt(projEnrolled)}</div>
-         </div>`;
+      ? `<div class="stat-card"><div class="stat-label has-tooltip">CE PS Slots Freed <span class="info-icon">i</span><div class="tooltip">Number of Phone Screen slots saved by routing apps directly to PFAs.</div></div><div class="stat-value" style="color:#22c55e;">+${fmt(slotsFreed)}</div><div style="flex:1;"></div><div class="stat-sub">Bypassed PS queue entirely</div></div>`
+      : `<div class="stat-card ${enrollDemandGap > 5 ? 'yel' : ''}"><div class="stat-label has-tooltip">Enrolls Lost to Cap <span class="info-icon">i</span><div class="tooltip">The difference between unconstrained demand yield and actual projected yield.</div></div><div class="stat-value ${enrollDemandGap > 5 ? 'red' : ''}">${fmt(enrollDemandGap)}</div><div style="flex:1;"></div><div class="stat-sub">Demand: ${fmt(demandEnrolled)} · Actual: ${fmt(projEnrolled)}</div></div>`;
 
     setHtml('metrics', `
       <div class="stat-card">
-        <div class="stat-label">PS Utilization <span title="(System Gross PS Demand) ÷ (Effective CE PS Capacity). Anything over 100% means the queue is backing up." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="stat-label has-tooltip">PS Utilization <span class="info-icon">i</span><div class="tooltip">(System Gross PS Demand) ÷ (Effective CE PS Capacity). Anything over 100% means the queue is backing up and patients are delayed.</div></div>
         <div class="stat-value">${pct(psUtil)}</div>
         <div class="util-bar-bg"><div class="util-bar-fill ${psUtilColor}" style="width:${Math.min(100, psUtil)}%"></div></div>
         <div class="stat-sub">Cap: ${fmt(effCap)} · ${psHead>=0 ? '+'+fmt(psHead)+' slots' : fmt(Math.abs(psHead))+' shortfall'}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Eval Utilization <span title="(Total Evals Scheduled) ÷ (Effective Eval Capacity). Evaluates if downstream calendars are overwhelmed by top-of-funnel throughput." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="stat-label has-tooltip">Eval Utilization <span class="info-icon">i</span><div class="tooltip">(Total Evals Scheduled) ÷ (Effective Eval Capacity). Evaluates if downstream calendars are overwhelmed by top-of-funnel throughput.</div></div>
         <div class="stat-value">${pct(evalUtil)}</div>
         <div class="util-bar-bg"><div class="util-bar-fill ${evalUtilColor}" style="width:${Math.min(100, evalUtil)}%"></div></div>
         <div class="stat-sub">Cap: ${fmt(effEvalCap)} · ${evalHead>=0 ? '+'+fmt(evalHead)+' slots' : fmt(Math.abs(evalHead))+' shortfall'}</div>
       </div>
       <div class="stat-card hl" style="border-color:#06b6d4;">
-        <div class="stat-label">Required CE Headcount <span title="Calculated by taking System Gross PS Demand ÷ Effective PS Capacity per CE. Purely based on top-of-funnel volume, ignoring target goals." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="stat-label has-tooltip">Required CE Headcount <span class="info-icon">i</span><div class="tooltip">Calculated by taking System Gross PS Demand ÷ Effective PS Capacity per CE. Purely based on top-of-funnel volume, ignoring target goals.</div></div>
         <div class="stat-value">${requiredCEs.toFixed(1)}</div>
         <div style="flex:1;"></div>
         <div class="stat-sub">Current: 15.0 · ${ceDeficit > 0 ? `<span class="red">+${ceDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`}</div>
       </div>
       <div class="stat-card hl" style="border-color:#f59e0b;">
-        <div class="stat-label">Required PFA Headcount <span title="Calculated by taking Total Apps via PFA ÷ PFA Capacity (Apps/Month) input." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="stat-label has-tooltip">Required PFA Headcount <span class="info-icon">i</span><div class="tooltip">Calculated by taking Total Apps via PFA ÷ PFA Capacity (Apps/Month) input.</div></div>
         <div class="stat-value">${requiredPFAs.toFixed(1)}</div>
         <div style="flex:1;"></div>
         <div class="stat-sub">To process ${fmt(pfaApps)} diverted apps</div>
       </div>
       
       <div class="stat-card hl">
-        <div class="stat-label">Max Enrollment Cap. <span title="Effective CE Capacity × Cumulative Standard Funnel Conversion Rate. Maximum theoretical enrollments if CEs ran at 100% utilization." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="stat-label has-tooltip">Max Enrollment Cap. <span class="info-icon">i</span><div class="tooltip">Effective CE Capacity × Cumulative Standard Funnel Conversion Rate. Maximum theoretical enrollments if CEs ran at 100% utilization.</div></div>
         <div class="stat-value">${fmt(totalMaxCapacity)}</div>
         <div style="flex:1;"></div>
         <div class="stat-sub">Target: ${fmt(enrollTgt)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Total Evals Needed <span title="The actual projected number of Clinical Evaluations that will be scheduled based on constrained throughput." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
-        <div class="stat-value">${fmt(totalEvals)}</div>
+        <div class="stat-label has-tooltip">Target Evals Needed <span class="info-icon">i</span><div class="tooltip">The number of Completed Evals required to hit the Enrollment Target (Target ÷ Blended Conversion Rate).</div></div>
+        <div class="stat-value">${fmt(targetEvalsComp)}</div>
         <div style="flex:1;"></div>
-        <div class="stat-sub">Std: ${fmt(projStdFunnel.evalSched)} · PFA: ${fmt(projPfaFunnel.evalSched)}</div>
+        <div class="stat-sub">Proj. Completed: ${fmt(projEvalComp)}</div>
       </div>
       ${freeCard}
       <div class="stat-card">
-        <div class="stat-label">Total Apps via PFA <span title="The number of PFA-diverted apps that currently consume CE Phone Screen capacity." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="stat-label">Total Apps via PFA</div>
         <div class="stat-value">${fmt(pfaApps)}</div>
         <div style="flex:1;"></div>
         <div class="stat-sub">Based on ${fmt(rv('pfaPct'))}% diversion rate</div>
@@ -511,19 +503,19 @@ function update() {
     const cvtC = capacityVariance >= 0 ? 'tb-delta-pos' : 'tb-delta-neg';
     setHtml('target-banner', `
       <div class="tb-item">
-        <div class="tb-label">Enrollment Target <span title="The company's monthly enrollment goal." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="tb-label has-tooltip">Enrollment Target <span class="info-icon">i</span><div class="tooltip">The company's monthly enrollment goal.</div></div>
         <div class="tb-val">${fmt(enrollTgt)}</div>
       </div><div class="tb-sep"></div>
       <div class="tb-item">
-        <div class="tb-label">Max Capacity Yield <span title="Theoretical max enrollments based strictly on CE capacity and current conversion rates." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="tb-label has-tooltip">Max Capacity Yield <span class="info-icon">i</span><div class="tooltip">Theoretical max enrollments based strictly on CE capacity and current conversion rates.</div></div>
         <div class="tb-val" style="color:#a5b4fc;">${fmt(totalMaxCapacity)}</div>
       </div><div class="tb-sep"></div>
       <div class="tb-item">
-        <div class="tb-label">Capacity Variance <span title="Difference between Max Capacity Yield and Enrollment Target. Negative means understaffed or low conversion rates." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="tb-label has-tooltip">Capacity Variance <span class="info-icon">i</span><div class="tooltip">Difference between Max Capacity Yield and Enrollment Target. Negative means understaffed or low conversion rates.</div></div>
         <div class="${cvtC}">${capacityVariance>=0?'+':''}${fmt(capacityVariance)}</div>
       </div><div class="tb-sep"></div>
       <div class="tb-item">
-        <div class="tb-label">In-Month Cohort Yield <span title="Actual projected enrollments based on the lesser of demand or capacity for the current month's cohort." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="tb-label has-tooltip">In-Month Cohort Yield <span class="info-icon">i</span><div class="tooltip">Actual projected enrollments based on the lesser of demand or capacity for the current month's cohort.</div></div>
         <div class="tb-val" style="color:#94a3b8;">${fmt(projEnrolled)}</div>
       </div>
     `);
@@ -639,19 +631,17 @@ function update() {
 
   } catch (e) {
     console.error("Dashboard Engine Error:", e);
-    // Safely print error so the screen doesn't just go blank
     const titleEl = document.getElementById('metrics-title');
     if(titleEl) titleEl.innerHTML = `<span style="color:#ef4444;">Dashboard Error: ${e.message}. Please check console.</span>`;
   }
 }
 
-// Attach listeners safely
 ['psSchedRate','pfaPct','psComp','siRate','schedRate','evalComp','enrollRate','pfaPsComp','pfaSiRate','pfaSchedRate','pfaEvalComp','pfaEnrollRate','pfaConvRate','pfaFutEvalComp','pfaFutEnrollRate','appGrowth','enroll-target','psCap','ptoDays', 'shrinkage', 'pfaCapPerHead'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', update);
 });
 
-// Run once to initialize
+// Run once on load
 window.onload = function() {
   update();
 };

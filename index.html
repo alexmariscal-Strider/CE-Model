@@ -329,7 +329,7 @@
       <h2>📅 Annual Calendar & PTO Manager</h2>
       <button class="modal-close" onclick="closePtoModal()">&times;</button>
     </div>
-    <p style="font-size:11px; color:#94a3b8; margin-bottom:16px;">Update working days and requested PTO across the entire year. These values automatically update the capacity formulas.</p>
+    <p style="font-size:11px; color:#94a3b8; margin-bottom:16px;">Update working days and requested PTO across the entire year. These values automatically save to your browser.</p>
     <table class="modal-table">
       <thead>
         <tr>
@@ -353,9 +353,13 @@ const MONTHS         = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PROJ_APPS_BASE = [1092, 1036, 1039, 1108, 1340, 1425, 1367, 1322]; 
 const ENROLL_TGTS    = [327,  348,  349,  370,  403,  466,  528,  529];
 
-// Changed to 'let' so they can be modified by the modal and sidebar
-let WORKING_DAYS     = [20, 21, 21, 21, 21, 21, 18, 22];
-let PTO_DAYS         = [0,  0,  0,  0,  0,  0,  0,  0 ];
+// ── LOCAL STORAGE ENGINE (PERSISTS DATA ACROSS REFRESHES) ────────────
+const DEFAULT_WORKING_DAYS = [20, 21, 21, 21, 21, 21, 18, 22];
+const DEFAULT_PTO_DAYS     = [0,  0,  0,  0,  0,  0,  0,  0 ];
+
+// Fetch from local memory, or fallback to the defaults if opening for the first time
+let WORKING_DAYS = JSON.parse(localStorage.getItem('ce_working_days')) || DEFAULT_WORKING_DAYS;
+let PTO_DAYS     = JSON.parse(localStorage.getItem('ce_pto_days')) || DEFAULT_PTO_DAYS;
 
 // ── TIME-BOXED WFM ALLOCATIONS ───────────────────────────────────────
 const STD_CE_PS_MINS_PER_DAY = 120;   // 4 slots @ 30m base
@@ -386,7 +390,7 @@ const setHtml = (id, html) => {
   if (el) el.innerHTML = html;
 };
 
-// ── MODAL LOGIC ──
+// ── MODAL & SAVE LOGIC ──
 function openPtoModal() {
   const tbody = document.getElementById('modal-table-body');
   let html = '';
@@ -412,6 +416,11 @@ function savePtoModal() {
     WORKING_DAYS[i] = parseFloat(document.getElementById(`mod-wd-${i}`).value) || 0;
     PTO_DAYS[i] = parseFloat(document.getElementById(`mod-pto-${i}`).value) || 0;
   }
+  
+  // Save custom calendar to browser memory
+  localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
+  localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
+  
   // Resync sidebar
   document.getElementById('workingDays').value = WORKING_DAYS[selMonth];
   document.getElementById('ptoDays').value = PTO_DAYS[selMonth];
@@ -420,9 +429,13 @@ function savePtoModal() {
 }
 
 function syncToArrays() {
-  // If the user manually types a number in the sidebar, update the master arrays immediately
+  // If the user manually types a number in the sidebar, save it to memory immediately
   WORKING_DAYS[selMonth] = rv('workingDays');
   PTO_DAYS[selMonth] = rv('ptoDays');
+  
+  localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
+  localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
+  
   update();
 }
 
@@ -484,10 +497,10 @@ function update() {
     const shrinkagePct   = rv('shrinkage') / 100;
 
     // 1. Determine maximum daily quota per person based on AHT and Boxed Minutes
-    const stdPsDaily   = STD_CE_PS_MINS_PER_DAY / psAht;      // defaults to 4
-    const stdEvalDaily = STD_CE_EVAL_MINS_PER_DAY / evalAht;  // defaults to 3
-    const leadPsDaily  = LEAD_CE_PS_MINS_PER_DAY / psAht;     // defaults to 3
-    const leadEvalDaily= LEAD_CE_EVAL_MINS_PER_DAY / evalAht; // defaults to 3
+    const stdPsDaily   = STD_CE_PS_MINS_PER_DAY / psAht;      
+    const stdEvalDaily = STD_CE_EVAL_MINS_PER_DAY / evalAht;  
+    const leadPsDaily  = LEAD_CE_PS_MINS_PER_DAY / psAht;     
+    const leadEvalDaily= LEAD_CE_EVAL_MINS_PER_DAY / evalAht; 
 
     // 2. Aggregate Team Daily Capacity
     const dailyPSCap   = (stdCEs * stdPsDaily) + (leadCEs * leadPsDaily);
@@ -771,7 +784,7 @@ function update() {
       ${cRows}
       <tr><td><strong>Total</strong></td><td>${fmt(totalApps)}</td><td class="em ${overCap?'b':''}">${fmt(ceGrossDemand)}${overCap?' ⚠️':''}</td><td class="em">${fmt(effPS)}</td><td class="${psUtil>100?'b':psUtil>90?'w':'g'}">${pct(psUtil)}</td></tr>
       <tr><td colspan="2">Calculated Base PS Capacity</td><td colspan="3" class="em">${fmt(psCapBase)}</td></tr>
-      <tr><td colspan="2">Known PTO Reduction (${fmtD(ptoDays)} days)</td><td colspan="3" class="b">−${fmtD(ptoPSLoss)} PS</td></tr>
+      <tr><td colspan="2">Known PTO Reduction</td><td colspan="3" class="b">−${fmtD(ptoPSLoss)} PS</td></tr>
       <tr><td colspan="2">Unplanned Shrinkage Buffer (${rv('shrinkage') || 0}%)</td><td colspan="3" class="b">−${fmtD(shrinkagePS)} PS</td></tr>
       <tr><td colspan="2"><strong>Effective CE PS Capacity</strong></td><td colspan="3" class="em g">${fmt(effCap)}</td></tr>
       <tr><td colspan="2"><strong>Headroom / (Shortfall)</strong></td><td colspan="3" class="em ${psHead>=0?'g':'b'}">${psHead>=0?'+':''}${fmt(psHead)}</td></tr>

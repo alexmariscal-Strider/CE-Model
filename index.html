@@ -16,8 +16,11 @@
   .month-btn { padding: 5px 11px; border-radius: 6px; border: 1px solid #2d3548; background: #1e2330; color: #94a3b8; font-size: 12px; cursor: pointer; transition: all 0.15s; }
   .month-btn:hover { border-color: #6366f1; color: #c7d2fe; }
   .month-btn.active { background: #312e81; border-color: #6366f1; color: #e0e7ff; font-weight: 600; }
+  
   .action-btn { background: #3b82f6; border-color: #2563eb; color: #ffffff; font-weight: 600; }
   .action-btn:hover { background: #2563eb; border-color: #1d4ed8; color: #ffffff; }
+  .danger-btn { background: transparent; border: 1px solid #ef4444; color: #ef4444; font-weight: 600; }
+  .danger-btn:hover { background: #ef4444; color: #ffffff; }
 
   .mode-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
   .mode-label { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
@@ -44,6 +47,13 @@
   .badge-current { display:inline-block; font-size:10px; padding:1px 6px; border-radius:4px; background:#1e3a5f; color:#93c5fd; font-weight:700; margin-left:5px; vertical-align:middle; }
   .badge-future  { display:inline-block; font-size:10px; padding:1px 6px; border-radius:4px; background:#14532d; color:#86efac; font-weight:700; margin-left:5px; vertical-align:middle; }
   
+  /* TOOLTIPS CSS */
+  .has-tooltip { position: relative; cursor: help; display: inline-flex; align-items: center; gap: 4px; }
+  .info-icon { font-style: normal; font-size: 10px; color: #94a3b8; background: #2d3548; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; line-height: 1; }
+  .tooltip { visibility: hidden; width: 220px; background-color: #1e2330; color: #cbd5e1; text-align: left; border-radius: 6px; padding: 10px; position: absolute; z-index: 50; bottom: 130%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.2s; border: 1px solid #3d4a63; box-shadow: 0 4px 12px rgba(0,0,0,0.5); font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: normal; white-space: normal; line-height: 1.5; pointer-events: none; }
+  .tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: #3d4a63 transparent transparent transparent; }
+  .has-tooltip:hover .tooltip { visibility: visible; opacity: 1; }
+
   /* KEY METRICS */
   .results-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 4px; }
   .stat-card { background: #252c3f; border-radius: 8px; padding: 12px; border: 1px solid #2d3548; display: flex; flex-direction: column; justify-content: space-between; }
@@ -114,7 +124,7 @@
   /* MODAL CSS */
   .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 17, 23, 0.85); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
   .modal-overlay.open { display: flex; }
-  .modal-box { background: #1e2330; border: 1px solid #3d4a63; border-radius: 10px; width: 450px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+  .modal-box { background: #1e2330; border: 1px solid #3d4a63; border-radius: 10px; width: 600px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
   .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #2d3548; padding-bottom: 12px; }
   .modal-header h2 { font-size: 14px; font-weight: 700; color: #f8fafc; margin: 0; }
   .modal-close { background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; line-height: 1; }
@@ -122,8 +132,8 @@
   .modal-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
   .modal-table th { text-align: left; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 8px; border-bottom: 1px solid #2d3548; }
   .modal-table td { padding: 6px 8px; border-bottom: 1px solid #1a2030; color: #cbd5e1; font-size: 12px; }
-  .modal-table input { width: 60px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 4px; color: #f1f5f9; padding: 4px; font-size: 12px; text-align: right; }
-  .modal-footer { display: flex; justify-content: flex-end; }
+  .modal-table input { width: 70px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 4px; color: #f1f5f9; padding: 4px; font-size: 12px; text-align: right; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
   
   /* CHART CONTAINER */
   .chart-container { position: relative; height: 220px; width: 100%; margin-top: 10px; }
@@ -160,10 +170,10 @@
   <div class="panel">
     <h2>Inputs</h2>
 
-    <div class="section-label">Volume Growth</div>
+    <div class="section-label">Volume & Forecasting</div>
     <div class="input-row">
       <label>Accepted Apps (base)</label>
-      <span class="ro-val" id="apps-base-ro">1092</span>
+      <input type="number" id="apps-base-input" value="1092" min="0" step="1" onchange="syncToArrays()">
     </div>
     <div class="input-row">
       <label>App Volume Bump (%)</label>
@@ -177,7 +187,7 @@
     
     <div class="input-row" style="margin-top: 8px;">
       <label>Enrollment Target</label>
-      <input type="number" id="enroll-target" value="327" min="0" max="9999" step="1">
+      <input type="number" id="enroll-target" value="327" min="0" max="9999" step="1" onchange="syncToArrays()">
     </div>
     <div class="input-row">
       <label>Apps → PS Scheduling Rate</label>
@@ -218,8 +228,8 @@
       <input type="number" id="ptoDays" value="0" min="0" max="200" step="0.5" onchange="syncToArrays()">
     </div>
     
-    <button class="month-btn action-btn" style="width: 100%; display: flex; justify-content: center; margin-top: 10px;" onclick="openPtoModal()">
-      📅 Manage Annual Calendar & PTO
+    <button class="month-btn action-btn" style="width: 100%; display: flex; justify-content: center; margin-top: 10px;" onclick="openSettingsModal()">
+      📅 Manage Annual Forecasts & Calendar
     </button>
 
     <div class="input-row" style="margin-top: 16px;">
@@ -334,39 +344,43 @@
 <div class="modal-overlay" id="ptoModal">
   <div class="modal-box">
     <div class="modal-header">
-      <h2>📅 Annual Calendar & PTO Manager</h2>
-      <button class="modal-close" onclick="closePtoModal()">&times;</button>
+      <h2>📅 Annual Master Forecast & Calendar</h2>
+      <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
     </div>
-    <p style="font-size:11px; color:#94a3b8; margin-bottom:16px;">Update working days and requested PTO across the entire year. These values automatically save to your browser.</p>
+    <p style="font-size:11px; color:#94a3b8; margin-bottom:16px;">Update pipeline projections, targets, and requested PTO across the entire year. These values automatically save to your browser.</p>
     <table class="modal-table">
       <thead>
         <tr>
           <th>Month</th>
-          <th>Working Days</th>
-          <th>Known PTO Days</th>
+          <th>Base Apps</th>
+          <th>Target Enroll</th>
+          <th>Work Days</th>
+          <th>Known PTO</th>
         </tr>
       </thead>
       <tbody id="modal-table-body">
         </tbody>
     </table>
     <div class="modal-footer">
-      <button class="month-btn action-btn" onclick="savePtoModal()">Save Changes</button>
+      <button class="month-btn danger-btn" onclick="restoreDefaults()">Restore Original Baselines</button>
+      <button class="month-btn action-btn" onclick="saveSettingsModal()">Save Changes</button>
     </div>
   </div>
 </div>
 
 <script>
-// ── MONTHLY DATA & CALENDAR ──────────────────────────────────────────
-const MONTHS         = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const PROJ_APPS_BASE = [1092, 1036, 1039, 1108, 1340, 1425, 1367, 1322]; 
-const ENROLL_TGTS    = [327,  348,  349,  370,  403,  466,  528,  529];
+// ── MONTHLY BASELINE DEFAULTS ──────────────────────────────────────────
+const MONTHS                = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DEFAULT_APPS_BASE     = [1092, 1036, 1039, 1108, 1340, 1425, 1367, 1322]; 
+const DEFAULT_ENROLL_TGTS   = [327,  348,  349,  370,  403,  466,  528,  529];
+const DEFAULT_WORKING_DAYS  = [20, 21, 21, 21, 21, 21, 18, 22];
+const DEFAULT_PTO_DAYS      = [0,  0,  0,  0,  0,  0,  0,  0 ];
 
 // ── LOCAL STORAGE ENGINE (PERSISTS DATA ACROSS REFRESHES) ────────────
-const DEFAULT_WORKING_DAYS = [20, 21, 21, 21, 21, 21, 18, 22];
-const DEFAULT_PTO_DAYS     = [0,  0,  0,  0,  0,  0,  0,  0 ];
-
-let WORKING_DAYS = JSON.parse(localStorage.getItem('ce_working_days')) || DEFAULT_WORKING_DAYS;
-let PTO_DAYS     = JSON.parse(localStorage.getItem('ce_pto_days')) || DEFAULT_PTO_DAYS;
+let PROJ_APPS_BASE = JSON.parse(localStorage.getItem('ce_apps_base')) || [...DEFAULT_APPS_BASE];
+let ENROLL_TGTS    = JSON.parse(localStorage.getItem('ce_enroll_tgts')) || [...DEFAULT_ENROLL_TGTS];
+let WORKING_DAYS   = JSON.parse(localStorage.getItem('ce_working_days')) || [...DEFAULT_WORKING_DAYS];
+let PTO_DAYS       = JSON.parse(localStorage.getItem('ce_pto_days')) || [...DEFAULT_PTO_DAYS];
 
 // ── TIME-BOXED WFM ALLOCATIONS ───────────────────────────────────────
 const STD_CE_PS_MINS_PER_DAY = 120;   // 4 slots @ 30m base
@@ -399,13 +413,15 @@ const setHtml = (id, html) => {
 };
 
 // ── MODAL & SAVE LOGIC ──
-function openPtoModal() {
+function openSettingsModal() {
   const tbody = document.getElementById('modal-table-body');
   let html = '';
   for (let i = 0; i < MONTHS.length; i++) {
     html += `
       <tr>
         <td><strong>${MONTHS[i]}</strong></td>
+        <td><input type="number" id="mod-apps-${i}" value="${PROJ_APPS_BASE[i]}" min="0"></td>
+        <td><input type="number" id="mod-tgt-${i}" value="${ENROLL_TGTS[i]}" min="0"></td>
         <td><input type="number" id="mod-wd-${i}" value="${WORKING_DAYS[i]}" step="0.5" min="0"></td>
         <td><input type="number" id="mod-pto-${i}" value="${PTO_DAYS[i]}" step="0.5" min="0"></td>
       </tr>
@@ -415,38 +431,66 @@ function openPtoModal() {
   document.getElementById('ptoModal').classList.add('open');
 }
 
-function closePtoModal() {
+function closeSettingsModal() {
   document.getElementById('ptoModal').classList.remove('open');
 }
 
-function savePtoModal() {
+function saveSettingsModal() {
   for (let i = 0; i < MONTHS.length; i++) {
-    WORKING_DAYS[i] = parseFloat(document.getElementById(`mod-wd-${i}`).value) || 0;
-    PTO_DAYS[i] = parseFloat(document.getElementById(`mod-pto-${i}`).value) || 0;
+    PROJ_APPS_BASE[i] = parseInt(document.getElementById(`mod-apps-${i}`).value) || 0;
+    ENROLL_TGTS[i]    = parseInt(document.getElementById(`mod-tgt-${i}`).value) || 0;
+    WORKING_DAYS[i]   = parseFloat(document.getElementById(`mod-wd-${i}`).value) || 0;
+    PTO_DAYS[i]       = parseFloat(document.getElementById(`mod-pto-${i}`).value) || 0;
   }
+  
+  localStorage.setItem('ce_apps_base', JSON.stringify(PROJ_APPS_BASE));
+  localStorage.setItem('ce_enroll_tgts', JSON.stringify(ENROLL_TGTS));
   localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
   localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
   
-  document.getElementById('workingDays').value = WORKING_DAYS[selMonth];
-  document.getElementById('ptoDays').value = PTO_DAYS[selMonth];
-  closePtoModal();
+  // Resync sidebar
+  document.getElementById('apps-base-input').value = PROJ_APPS_BASE[selMonth];
+  document.getElementById('enroll-target').value   = ENROLL_TGTS[selMonth];
+  document.getElementById('workingDays').value     = WORKING_DAYS[selMonth];
+  document.getElementById('ptoDays').value         = PTO_DAYS[selMonth];
+  
+  closeSettingsModal();
   update();
 }
 
+function restoreDefaults() {
+  if(!confirm("Are you sure you want to restore the original baseline forecasts and targets? This will overwrite your saved changes permanently.")) return;
+  
+  PROJ_APPS_BASE = [...DEFAULT_APPS_BASE];
+  ENROLL_TGTS    = [...DEFAULT_ENROLL_TGTS];
+  WORKING_DAYS   = [...DEFAULT_WORKING_DAYS];
+  PTO_DAYS       = [...DEFAULT_PTO_DAYS];
+  
+  saveSettingsModal(); // Saves the restored defaults to local storage and updates UI
+}
+
 function syncToArrays() {
-  WORKING_DAYS[selMonth] = rv('workingDays');
-  PTO_DAYS[selMonth] = rv('ptoDays');
+  // If user types directly in the left sidebar, save it
+  PROJ_APPS_BASE[selMonth] = rv('apps-base-input');
+  ENROLL_TGTS[selMonth]    = rv('enroll-target');
+  WORKING_DAYS[selMonth]   = rv('workingDays');
+  PTO_DAYS[selMonth]       = rv('ptoDays');
+  
+  localStorage.setItem('ce_apps_base', JSON.stringify(PROJ_APPS_BASE));
+  localStorage.setItem('ce_enroll_tgts', JSON.stringify(ENROLL_TGTS));
   localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
   localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
+  
   update();
 }
 
 function setMonth(idx) {
   selMonth = idx;
   document.querySelectorAll('.month-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
-  document.getElementById('enroll-target').value = ENROLL_TGTS[idx];
-  document.getElementById('workingDays').value   = WORKING_DAYS[idx];
-  document.getElementById('ptoDays').value       = PTO_DAYS[idx];
+  document.getElementById('apps-base-input').value = PROJ_APPS_BASE[idx];
+  document.getElementById('enroll-target').value   = ENROLL_TGTS[idx];
+  document.getElementById('workingDays').value     = WORKING_DAYS[idx];
+  document.getElementById('ptoDays').value         = PTO_DAYS[idx];
   update();
 }
 
@@ -583,18 +627,17 @@ function update() {
     const appGrowth   = rv('appGrowth');
     
     const totalApps   = Math.round(baseApps * (1 + (appGrowth / 100)));
-    setText('apps-base-ro', fmt(baseApps));
     setText('apps-adj-ro', fmt(totalApps));
     
-    const enrollTgt   = parseInt(document.getElementById('enroll-target').value) || ENROLL_TGTS[selMonth];
+    const enrollTgt   = ENROLL_TGTS[selMonth];
     
     const stdCEs         = rv('stdCEs');
     const leadCEs        = rv('leadCEs');
     const totalHeadcount = stdCEs + leadCEs || 1;
-    const workingDays    = rv('workingDays');
+    const workingDays    = WORKING_DAYS[selMonth];
     const psAht          = rv('psAht') || 30;
     const evalAht        = rv('evalAht') || 60;
-    const ptoDays        = rv('ptoDays');
+    const ptoDays        = PTO_DAYS[selMonth];
     const shrinkagePct   = rv('shrinkage') / 100;
 
     const stdPsDaily   = STD_CE_PS_MINS_PER_DAY / psAht;      
@@ -861,7 +904,6 @@ function update() {
       <tr><td colspan="2"><strong>Headroom / (Shortfall)</strong></td><td colspan="3" class="em ${psHead>=0?'g':'b'}">${psHead>=0?'+':''}${fmt(psHead)}</td></tr>
     `);
 
-    // Ensure the chart updates at the very end
     updateMacroChart();
 
   } catch (e) {
@@ -871,7 +913,7 @@ function update() {
   }
 }
 
-['psSchedRate','pfaPct','psComp','siRate','schedRate','evalComp','enrollRate','pfaPsComp','pfaSiRate','pfaSchedRate','pfaEvalComp','pfaEnrollRate','pfaConvRate','pfaFutEvalComp','pfaFutEnrollRate','appGrowth','enroll-target','ptoDays', 'shrinkage', 'pfaCapPerHead', 'stdCEs', 'leadCEs', 'workingDays', 'psAht', 'evalAht'].forEach(id => {
+['apps-base-input', 'psSchedRate','pfaPct','psComp','siRate','schedRate','evalComp','enrollRate','pfaPsComp','pfaSiRate','pfaSchedRate','pfaEvalComp','pfaEnrollRate','pfaConvRate','pfaFutEvalComp','pfaFutEnrollRate','appGrowth','enroll-target','ptoDays', 'shrinkage', 'pfaCapPerHead', 'stdCEs', 'leadCEs', 'workingDays', 'psAht', 'evalAht'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', update);
 });

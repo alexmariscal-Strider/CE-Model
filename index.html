@@ -43,6 +43,10 @@
   .input-row input[type=number] { width: 68px; background: #0f1117; border: 1px solid #3d4a63; border-radius: 5px; color: #f1f5f9; padding: 3px 6px; font-size: 12px; text-align: right; flex-shrink: 0; }
   .val-badge { min-width: 40px; text-align: right; font-size: 12px; font-weight: 600; color: #a5b4fc; flex-shrink: 0; }
   .ro-val    { min-width: 60px; text-align: right; font-size: 12px; font-weight: 600; color: #f1f5f9; background: #0f1117; border: 1px solid #2d3548; border-radius: 5px; padding: 3px 7px; flex-shrink: 0; }
+  
+  .quota-row { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+  .quota-row input { width: 44px; text-align: center; }
+  .quota-lbl { font-size: 10px; color: #94a3b8; }
 
   .badge-current { display:inline-block; font-size:10px; padding:1px 6px; border-radius:4px; background:#1e3a5f; color:#93c5fd; font-weight:700; margin-left:5px; vertical-align:middle; }
   .badge-future  { display:inline-block; font-size:10px; padding:1px 6px; border-radius:4px; background:#14532d; color:#86efac; font-weight:700; margin-left:5px; vertical-align:middle; }
@@ -149,8 +153,8 @@
 <div class="mode-wrap">
   <span class="mode-label">Pathway Mode:</span>
   <div class="mode-bar">
-    <button class="mode-btn active-current" id="btn-current" onclick="setMode('current')">📞 Current State — PFA → CE Phone Screen</button>
-    <button class="mode-btn" id="btn-future" onclick="setMode('future')">🚀 Future State — PFA Converts → Skip to CE Eval</button>
+    <button class="mode-btn active-current" id="btn-current" onclick="setMode('current')" title="PFAs do prep work, but CEs still conduct the Phone Screen. (No CE PS time saved)">📞 Current State — PFA → CE Phone Screen</button>
+    <button class="mode-btn" id="btn-future" onclick="setMode('future')" title="PFAs conduct the Phone Screen, completely bypassing the CE PS queue. (Saves CE PS time)">🚀 Future State — PFA Converts → Skip to CE Eval</button>
   </div>
 </div>
 
@@ -198,14 +202,30 @@
 
     <div class="section-label">Staffing Engine (Team Comp)</div>
     <div class="input-row">
-      <label>Standard CEs <br><span style="color:#64748b;font-size:10px;">5 hrs patient-facing/day</span></label>
+      <label>Standard CEs Headcount</label>
       <input type="number" id="stdCEs" value="13" min="0" max="100" step="1">
     </div>
     <div class="input-row">
-      <label>Lead CEs <br><span style="color:#64748b;font-size:10px;">4.5 hrs patient-facing/day</span></label>
+      <label>Lead CEs Headcount</label>
       <input type="number" id="leadCEs" value="2" min="0" max="50" step="1">
     </div>
-    
+
+    <div class="section-label" style="color:#f59e0b;">Clinical Scheduling Quotas (Sandbox)</div>
+    <div class="input-row">
+      <label>Standard CE Daily Quota</label>
+      <div class="quota-row">
+        <input type="number" id="stdCePsQuota" value="4" min="0" max="20" step="1"> <span class="quota-lbl">PS</span>
+        <input type="number" id="stdCeEvalQuota" value="3" min="0" max="20" step="1"> <span class="quota-lbl">Evals</span>
+      </div>
+    </div>
+    <div class="input-row">
+      <label>Lead CE Daily Quota</label>
+      <div class="quota-row">
+        <input type="number" id="leadCePsQuota" value="3" min="0" max="20" step="1"> <span class="quota-lbl">PS</span>
+        <input type="number" id="leadCeEvalQuota" value="3" min="0" max="20" step="1"> <span class="quota-lbl">Evals</span>
+      </div>
+    </div>
+
     <div class="section-label">Efficiency & Handle Time (AHT)</div>
     <div class="input-row">
       <label>PS Handle Time (mins)</label>
@@ -239,13 +259,14 @@
     </div>
     <div class="input-row"><label>Effective CE PS Capacity</label><span class="ro-val" id="eff-cap-ro" style="color:#06b6d4;">—</span></div>
 
-    <div class="input-row" style="margin-top:12px; border-top:1px solid #2d3548; padding-top:12px;">
-      <label>% Apps Diverted to PFA</label>
-      <input type="range" id="pfaPct" min="0" max="40" value="10" step="1">
+    <div class="section-label" style="color:#22c55e;">PFA Capacity Arbitrage</div>
+    <div class="input-row" style="margin-top:4px;">
+      <label>Target Apps Diverted to PFA (%) <span title="Use this to determine how many PFAs you need to hire to reach this goal." style="cursor:help; color:#a5b4fc; font-size:10px;">ⓘ</span></label>
+      <input type="range" id="pfaPct" min="0" max="100" value="10" step="1">
       <span class="val-badge" id="pfaPct-v">10%</span>
     </div>
     <div class="input-row">
-      <label>PFA Capacity (Apps/Month)<br><span style="color:#64748b;font-size:10px;">Assumed volume 1 PFA handles</span></label>
+      <label>PFA Capacity (Apps/Month/Head)<br><span style="color:#64748b;font-size:10px;">Assumed volume 1 PFA handles</span></label>
       <input type="number" id="pfaCapPerHead" value="120" min="10" max="1000" step="5">
     </div>
 
@@ -291,6 +312,16 @@
         <em><strong>Note to Leadership:</strong> Because enrollment targets are met via a rolling timeline (approx. 10% in-month apps, 60% prior month, 30% 2+ months back), comparing raw In-Month Cohort Yield directly to the Target is misleading. <strong>Capacity Variance</strong> is the true leading indicator of whether the team is staffed to clear the required historical pipeline to hit the goal.</em>
       </p>
     </div>
+    
+    <div class="panel" id="chart-panel" style="display:none;">
+      <h2>
+        Headcount Forecast (May - Dec) 
+        <span title="This chart runs the current dashboard settings across all months to show exactly when your required CE headcount will exceed your current staff." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span>
+      </h2>
+      <div class="chart-container">
+        <canvas id="headcountChart"></canvas>
+      </div>
+    </div>
 
     <div class="panel">
       <h2>Weekly Run Rate vs. Targets <span style="font-size:10px;color:#64748b;font-weight:400;">· Assumes 4.33 weeks per month</span></h2>
@@ -323,16 +354,6 @@
         </div>
     </div>
     
-    <div class="panel" id="chart-panel" style="display:none;">
-      <h2>
-        Headcount Forecast (May - Dec) 
-        <span title="This chart runs the current dashboard settings across all months to show exactly when your required CE headcount will exceed your current staff." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span>
-      </h2>
-      <div class="chart-container">
-        <canvas id="headcountChart"></canvas>
-      </div>
-    </div>
-
     <div class="panel">
       <h2>System Capacity Summary</h2>
       <table class="capacity-table" id="cap-table"></table>
@@ -382,17 +403,11 @@ let ENROLL_TGTS    = JSON.parse(localStorage.getItem('ce_enroll_tgts')) || [...D
 let WORKING_DAYS   = JSON.parse(localStorage.getItem('ce_working_days')) || [...DEFAULT_WORKING_DAYS];
 let PTO_DAYS       = JSON.parse(localStorage.getItem('ce_pto_days')) || [...DEFAULT_PTO_DAYS];
 
-// ── TIME-BOXED WFM ALLOCATIONS ───────────────────────────────────────
-const STD_CE_PS_MINS_PER_DAY = 120;   // 4 slots @ 30m base
-const STD_CE_EVAL_MINS_PER_DAY = 180; // 3 slots @ 60m base
-const LEAD_CE_PS_MINS_PER_DAY = 90;   // 3 slots @ 30m base
-const LEAD_CE_EVAL_MINS_PER_DAY = 180;// 3 slots @ 60m base
-
 const WEEKS_PER_MONTH = 4.33; 
 
 let selMonth = 0;
 let selMode  = 'current';
-let myChart  = null; // Global variable for the Chart.js instance
+let myChart  = null; 
 
 const fmt = n => Math.round(n).toLocaleString();
 const fmtD = n => n.toFixed(1);
@@ -448,7 +463,6 @@ function saveSettingsModal() {
   localStorage.setItem('ce_working_days', JSON.stringify(WORKING_DAYS));
   localStorage.setItem('ce_pto_days', JSON.stringify(PTO_DAYS));
   
-  // Resync sidebar
   document.getElementById('apps-base-input').value = PROJ_APPS_BASE[selMonth];
   document.getElementById('enroll-target').value   = ENROLL_TGTS[selMonth];
   document.getElementById('workingDays').value     = WORKING_DAYS[selMonth];
@@ -466,11 +480,10 @@ function restoreDefaults() {
   WORKING_DAYS   = [...DEFAULT_WORKING_DAYS];
   PTO_DAYS       = [...DEFAULT_PTO_DAYS];
   
-  saveSettingsModal(); // Saves the restored defaults to local storage and updates UI
+  saveSettingsModal(); 
 }
 
 function syncToArrays() {
-  // If user types directly in the left sidebar, save it
   PROJ_APPS_BASE[selMonth] = rv('apps-base-input');
   ENROLL_TGTS[selMonth]    = rv('enroll-target');
   WORKING_DAYS[selMonth]   = rv('workingDays');
@@ -529,11 +542,11 @@ function getReqCEsForMonth(i) {
   const totalHeadcount = stdCEs + leadCEs || 1;
   const wd = WORKING_DAYS[i];
   const pto = PTO_DAYS[i];
-  const psAht = rv('psAht') || 30;
   const shrinkagePct = rv('shrinkage') / 100;
 
-  const stdPsDaily = STD_CE_PS_MINS_PER_DAY / psAht;      
-  const leadPsDaily = LEAD_CE_PS_MINS_PER_DAY / psAht;     
+  // Pull dynamic quotas
+  const stdPsDaily   = rv('stdCePsQuota');      
+  const leadPsDaily  = rv('leadCePsQuota');     
   const dailyPSCap = (stdCEs * stdPsDaily) + (leadCEs * leadPsDaily);
   const psCapBase = dailyPSCap * wd;
   
@@ -541,10 +554,14 @@ function getReqCEsForMonth(i) {
   const shrinkagePS = psCapBase * shrinkagePct;
   const effCap = Math.max(0, Math.round(psCapBase - ptoPSLoss - shrinkagePS));   
 
-  const pfaP = rv('pfaPct') / 100;
+  const targetPfaPct = rv('pfaPct') / 100;
   const psScR = rv('psSchedRate') / 100;
-  const stdApps = Math.round(totalApps * (1 - pfaP));
-  const pfaApps = Math.round(totalApps * pfaP);
+  const pfaTargetApps = Math.round(totalApps * targetPfaPct);
+  
+  // Notice we completely dropped the pfaHeadcount capacity cap here! 
+  // PFA Apps are driven ENTIRELY by the percentage slider.
+  const pfaApps = pfaTargetApps; 
+  const stdApps = totalApps - pfaApps;
 
   const grossStdPS = stdApps * psScR;
   const grossPfaPS = selMode === 'current' ? pfaApps * psScR : 0;
@@ -635,15 +652,14 @@ function update() {
     const leadCEs        = rv('leadCEs');
     const totalHeadcount = stdCEs + leadCEs || 1;
     const workingDays    = WORKING_DAYS[selMonth];
-    const psAht          = rv('psAht') || 30;
-    const evalAht        = rv('evalAht') || 60;
     const ptoDays        = PTO_DAYS[selMonth];
     const shrinkagePct   = rv('shrinkage') / 100;
 
-    const stdPsDaily   = STD_CE_PS_MINS_PER_DAY / psAht;      
-    const stdEvalDaily = STD_CE_EVAL_MINS_PER_DAY / evalAht;  
-    const leadPsDaily  = LEAD_CE_PS_MINS_PER_DAY / psAht;     
-    const leadEvalDaily= LEAD_CE_EVAL_MINS_PER_DAY / evalAht; 
+    // Pull Dynamic Sandbox Quotas
+    const stdPsDaily   = rv('stdCePsQuota');      
+    const stdEvalDaily = rv('stdCeEvalQuota');  
+    const leadPsDaily  = rv('leadCePsQuota');     
+    const leadEvalDaily= rv('leadCeEvalQuota'); 
 
     const dailyPSCap   = (stdCEs * stdPsDaily) + (leadCEs * leadPsDaily);
     const dailyEvalCap = (stdCEs * stdEvalDaily) + (leadCEs * leadEvalDaily);
@@ -660,23 +676,34 @@ function update() {
     const effCap       = Math.max(0, Math.round(psCapBase - ptoPSLoss - shrinkagePS));   
     const effEvalCap   = Math.max(0, Math.round(evalCapBase - ptoEvalLoss - shrinkageEval));
 
-    const pfaP        = rv('pfaPct') / 100;
-    const psScR       = rv('psSchedRate') / 100;
+    // ── THE PFA DIVERSION FIX ──
+    const targetPfaPct = rv('pfaPct') / 100;
+    const psScR        = rv('psSchedRate') / 100;
+    const pfaCapPerMonth = rv('pfaCapPerHead') || 120;
+
+    // Calculate EXACTLY how many apps the slider dictates
+    const pfaApps = Math.round(totalApps * targetPfaPct);
+    const stdApps = totalApps - pfaApps;
+
+    // Calculate EXACTLY how many PFAs you need to handle that volume
+    const requiredPFAs = pfaApps / pfaCapPerMonth;
 
     ['psSchedRate','pfaPct','psComp','siRate','schedRate','evalComp','enrollRate',
      'pfaPsComp','pfaSiRate','pfaSchedRate','pfaEvalComp','pfaEnrollRate',
-     'pfaConvRate','pfaFutEvalComp','pfaFutEnrollRate','appGrowth','shrinkage', 'psAht', 'evalAht'].forEach(id => {
+     'pfaConvRate','pfaFutEvalComp','pfaFutEnrollRate','appGrowth','shrinkage'].forEach(id => {
       const el = document.getElementById(id);
       const v  = document.getElementById(id+'-v');
       if (el && v) {
         if (id === 'appGrowth' && el.value > 0) v.textContent = '+' + parseFloat(el.value) + '%';
-        else if (id === 'psAht' || id === 'evalAht') v.textContent = parseFloat(el.value) + 'm';
         else v.textContent = parseFloat(el.value) + '%';
       }
     });
-
-    const stdApps = Math.round(totalApps * (1 - pfaP));
-    const pfaApps = Math.round(totalApps * pfaP);
+    
+    ['psAht', 'evalAht'].forEach(id => {
+      const el = document.getElementById(id);
+      const v  = document.getElementById(id+'-v');
+      if (el && v) v.textContent = parseFloat(el.value) + 'm';
+    });
 
     const systemGrossPS = totalApps * psScR; 
     setText('gross-ps-ro', fmt(systemGrossPS));
@@ -727,9 +754,6 @@ function update() {
     const requiredCEs = effCapPerCE > 0 ? (ceGrossDemand / effCapPerCE) : 0;
     const ceDeficit = requiredCEs - totalHeadcount;
 
-    const pfaCapPerHead = rv('pfaCapPerHead') || 1;
-    const requiredPFAs = pfaApps / pfaCapPerHead;
-
     const blendedEnrollRate = projEvalComp > 0 ? (projEnrolled / projEvalComp) : (rv('enrollRate') / 100);
     const targetEvalsComp = enrollTgt / blendedEnrollRate;
 
@@ -762,7 +786,7 @@ function update() {
         <div class="stat-sub">Current: ${totalHeadcount.toFixed(1)} · ${ceDeficit > 0 ? `<span class="red">+${ceDeficit.toFixed(1)} needed</span>` : `<span style="color:#22c55e;">Fully Staffed</span>`}</div>
       </div>
       <div class="stat-card hl" style="border-color:#f59e0b;">
-        <div class="stat-label">Required PFA Headcount <span title="Calculated by taking Total Apps via PFA ÷ PFA Capacity (Apps/Month) input." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
+        <div class="stat-label">Required PFA Headcount <span title="Based exactly on your Target Apps Diverted slider ÷ PFA Capacity." style="cursor:help; color:#a5b4fc; font-size:11px;">ⓘ</span></div>
         <div class="stat-value">${requiredPFAs.toFixed(1)}</div>
         <div style="flex:1;"></div>
         <div class="stat-sub">To process ${fmt(pfaApps)} diverted apps</div>
@@ -913,7 +937,7 @@ function update() {
   }
 }
 
-['apps-base-input', 'psSchedRate','pfaPct','psComp','siRate','schedRate','evalComp','enrollRate','pfaPsComp','pfaSiRate','pfaSchedRate','pfaEvalComp','pfaEnrollRate','pfaConvRate','pfaFutEvalComp','pfaFutEnrollRate','appGrowth','enroll-target','ptoDays', 'shrinkage', 'pfaCapPerHead', 'stdCEs', 'leadCEs', 'workingDays', 'psAht', 'evalAht'].forEach(id => {
+['apps-base-input', 'psSchedRate','pfaPct','psComp','siRate','schedRate','evalComp','enrollRate','pfaPsComp','pfaSiRate','pfaSchedRate','pfaEvalComp','pfaEnrollRate','pfaConvRate','pfaFutEvalComp','pfaFutEnrollRate','appGrowth','enroll-target','ptoDays', 'shrinkage', 'pfaCapPerHead', 'stdCEs', 'leadCEs', 'workingDays', 'psAht', 'evalAht', 'stdCePsQuota', 'stdCeEvalQuota', 'leadCePsQuota', 'leadCeEvalQuota'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', update);
 });
